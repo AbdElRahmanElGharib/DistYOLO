@@ -58,3 +58,23 @@ class SPPF(keras.Model):
         x = self.conv_out(x)
 
         return x
+
+
+class Bottleneck(keras.Model):
+    def __init__(self, channels, shortcut, *args, **kwargs):
+        super(Bottleneck, self).__init__(*args, **kwargs)
+        self.add = keras.layers.Add() if shortcut else None
+        self.conv1 = Conv(channels, 3, 1, 1)
+        self.conv2 = Conv(channels, 3, 1, 1)
+        self.shortcut = shortcut
+
+    def call(self, inputs, training=None, mask=None):
+        if self.shortcut:
+            x0 = self.conv1(inputs)
+            x = self.conv2(x0)
+            x = self.add([x0, x])
+        else:
+            x = self.conv1(inputs)
+            x = self.conv2(x)
+
+        return x
