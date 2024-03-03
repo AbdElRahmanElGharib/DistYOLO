@@ -167,10 +167,10 @@ class FPN(keras.Model):
 
     def call(self, inputs, training=None, mask=None):
         p3, p4, p5 = inputs
-        p4p5 = self.up1((p5, p4))
-        p3p4p5 = self.up2((p4p5, p3))
-        p3p4p5_d1 = self.down1((p3p4p5, p4p5))
-        p3p4p5_d2 = self.down2((p3p4p5_d1, p5))
+        p4p5 = self.up1(p5, p4)
+        p3p4p5 = self.up2(p4p5, p3)
+        p3p4p5_d1 = self.down1(p3p4p5, p4p5)
+        p3p4p5_d2 = self.down2(p3p4p5_d1, p5)
         return [p3p4p5, p3p4p5_d1, p3p4p5_d2]
 
 
