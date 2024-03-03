@@ -5,6 +5,7 @@ import keras
 
 class Conv(keras.Model):
     def __init__(self, filters, kernel_size, strides, padding,  *args, **kwargs):
+
         super(Conv, self).__init__(*args, **kwargs)
         self.pad = None
         self.conv = None
@@ -25,6 +26,7 @@ class Conv(keras.Model):
         self.act = keras.layers.Activation(activation=tf.nn.silu)
 
     def call(self, inputs, training=None, mask=None):
+
         x = self.pad(inputs)
         x = self.conv(x)
         x = self.bn(x)
@@ -35,6 +37,7 @@ class Conv(keras.Model):
 
 class SPPF(keras.Model):
     def __init__(self, channels, pool_size=5, *args, **kwargs):
+
         super(SPPF, self).__init__(*args, **kwargs)
         self.conv_in = Conv(channels//2, 1, 1, 'same')
         self.conv_out = Conv(channels, 1, 1, 'same')
@@ -50,6 +53,7 @@ class SPPF(keras.Model):
                                             padding='same')
 
     def call(self, inputs, training=None, mask=None):
+
         x0 = self.conv_in(inputs)
         x1 = self.pool1(x0)
         x2 = self.pool1(x1)
@@ -62,6 +66,7 @@ class SPPF(keras.Model):
 
 class Bottleneck(keras.Model):
     def __init__(self, channels, shortcut, *args, **kwargs):
+
         super(Bottleneck, self).__init__(*args, **kwargs)
         self.add = keras.layers.Add() if shortcut else None
         self.conv1 = Conv(channels, 3, 1, 1)
@@ -69,6 +74,7 @@ class Bottleneck(keras.Model):
         self.shortcut = shortcut
 
     def call(self, inputs, training=None, mask=None):
+
         if self.shortcut:
             x0 = self.conv1(inputs)
             x = self.conv2(x0)
@@ -76,5 +82,27 @@ class Bottleneck(keras.Model):
         else:
             x = self.conv1(inputs)
             x = self.conv2(x)
+
+        return x
+
+
+class C2F(keras.Model):
+    def __init__(self, out_channels, num_bottlenecks, shortcut, *args, **kwargs):
+
+        super(C2F, self).__init__(*args, **kwargs)
+        self.conv_in = Conv(out_channels, 1, 1, 0)
+        self.conv_out = Conv(out_channels, 1, 1, 0)
+        self.concat = keras.layers.Concatenate()
+        self.bottlenecks = [Bottleneck(int(0.5*out_channels), shortcut) for _ in range(num_bottlenecks)]
+
+    def call(self, inputs, training=None, mask=None):
+
+        x = self.conv_in(inputs)
+        x, x0 = tf.split(x, 2, axis=-1)
+        x_concat = [x, x0]
+        for bottleneck in self.bottlenecks:
+            x_concat.append(bottleneck(x_concat[-1]))
+        x = self.concat(x_concat)
+        x = self.conv_out(x)
 
         return x
