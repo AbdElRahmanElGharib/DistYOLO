@@ -41,3 +41,10 @@ def get_anchors(
         [all_anchors[:, 1, None], all_anchors[:, 0, None]], axis=-1
     )
     return all_anchors, all_strides
+
+
+def dist2bbox(distance, anchor_points):
+    left_top, right_bottom = tf.split(distance, 2, axis=-1)
+    x1y1 = anchor_points - left_top
+    x2y2 = anchor_points + right_bottom
+    return tf.concat((x1y1, x2y2), axis=-1)  # xyxy bbox
