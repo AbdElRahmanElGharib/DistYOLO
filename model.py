@@ -51,8 +51,8 @@ class SPPF(keras.Model):
     def call(self, inputs, training=None, mask=None):
         x0 = self.conv_in(inputs)
         x1 = self.pool1(x0)
-        x2 = self.pool1(x1)
-        x3 = self.pool1(x2)
+        x2 = self.pool2(x1)
+        x3 = self.pool3(x2)
         x = self.concat([x0, x1, x2, x3])
         x = self.conv_out(x)
         return x
@@ -233,9 +233,6 @@ class DetectionHead(keras.Model):
         x3_classes = self.classes3(p3p4p5_d2)
         x3 = self.concat3([x3_boxes, x3_classes])
         x3 = self.reshape3(x3)
-        print(x1.shape)
-        print(x2.shape)
-        print(x3.shape)
         x = self.concat_out([x1, x2, x3])
         x = self.act_out(x)
         return x
