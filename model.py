@@ -236,3 +236,11 @@ class DetectionHead(keras.Model):
         x = self.concat_out([x1, x2, x3])
         x = self.act_out(x)
         return x
+
+
+class SegmentationHead(keras.Model):
+    def __init__(self, *args, **kwargs):
+        super(SegmentationHead, self).__init__(*args, **kwargs)
+
+    def call(self, inputs, training=None, mask=None):
+        pass
