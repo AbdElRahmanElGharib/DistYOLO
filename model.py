@@ -135,7 +135,7 @@ class FPNUpSample(keras.Model):
         self.c2f = C2F(out_channels, int(3 * depth), False)
 
     def call(self, inputs, training=None, mask=None):
-        start, target = inputs
+        start, target = inputs['start'], inputs['target']
         x = self.up(start)
         x = self.concat([x, target])
         x = self.c2f(x)
@@ -150,7 +150,7 @@ class FPNDownSample(keras.Model):
         self.c2f = C2F(out_channels, int(3 * depth), False)
 
     def call(self, inputs, training=None, mask=None):
-        start, target = inputs
+        start, target = inputs['start'], inputs['target']
         x = self.conv(start)
         x = self.concat([x, target])
         x = self.c2f(x)
@@ -167,10 +167,10 @@ class FPN(keras.Model):
 
     def call(self, inputs, training=None, mask=None):
         p3, p4, p5 = inputs
-        p4p5 = self.up1(p5, p4)
-        p3p4p5 = self.up2(p4p5, p3)
-        p3p4p5_d1 = self.down1(p3p4p5, p4p5)
-        p3p4p5_d2 = self.down2(p3p4p5_d1, p5)
+        p4p5 = self.up1({'start': p5, 'target': p4})
+        p3p4p5 = self.up2({'start': p4p5, 'target': p3})
+        p3p4p5_d1 = self.down1({'start': p3p4p5, 'target': p4p5})
+        p3p4p5_d2 = self.down2({'start': p3p4p5_d1, 'target': p5})
         return [p3p4p5, p3p4p5_d1, p3p4p5_d2]
 
 
