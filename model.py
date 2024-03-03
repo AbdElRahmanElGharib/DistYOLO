@@ -172,3 +172,67 @@ class FPN(keras.Model):
         p3p4p5_d1 = self.down1(p3p4p5, p4p5)
         p3p4p5_d2 = self.down2(p3p4p5_d1, p5)
         return [p3p4p5, p3p4p5_d1, p3p4p5_d2]
+
+
+class DetectionHead(keras.Model):
+    def __init__(self, num_classes: int = 80, width=1.0, *args, **kwargs):
+        super(DetectionHead, self).__init__(*args, **kwargs)
+        self.boxes1 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=64, kernel_size=1, strides=1)
+        ])
+        self.classes1 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.sigmoid)
+        ])
+        self.concat1 = keras.layers.Concatenate(axis=-1)
+        self.reshape1 = keras.layers.Reshape(target_shape=(-1, num_classes+64))
+        self.boxes2 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=64, kernel_size=1, strides=1)
+        ])
+        self.classes2 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.sigmoid)
+        ])
+        self.concat2 = keras.layers.Concatenate(axis=-1)
+        self.reshape2 = keras.layers.Reshape(target_shape=(-1, num_classes + 64))
+        self.boxes3 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=64, kernel_size=1, strides=1)
+        ])
+        self.classes3 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.sigmoid)
+        ])
+        self.concat3 = keras.layers.Concatenate(axis=-1)
+        self.reshape3 = keras.layers.Reshape(target_shape=(-1, num_classes + 64))
+        self.concat_out = keras.layers.Concatenate(axis=0)
+        self.act_out = keras.layers.Activation(activation='linear', dtype='float32')
+
+    def call(self, inputs, training=None, mask=None):
+        p3p4p5, p3p4p5_d1, p3p4p5_d2 = inputs
+        x1_boxes = self.boxes1(p3p4p5)
+        x1_classes = self.classes1(p3p4p5)
+        x1 = self.concat1([x1_boxes, x1_classes])
+        x1 = self.reshape1(x1)
+        x2_boxes = self.boxes1(p3p4p5)
+        x2_classes = self.classes1(p3p4p5)
+        x2 = self.concat1([x2_boxes, x2_classes])
+        x2 = self.reshape1(x2)
+        x3_boxes = self.boxes1(p3p4p5)
+        x3_classes = self.classes1(p3p4p5)
+        x3 = self.concat1([x3_boxes, x3_classes])
+        x3 = self.reshape1(x3)
+        x = self.concat_out([x1, x2, x3])
+        x = self.act_out(x)
+        return x
