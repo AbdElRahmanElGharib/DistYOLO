@@ -9,16 +9,12 @@ class Conv(keras.Model):
         self.pad = None
         self.conv = None
         if isinstance(padding, str):
-            if padding == 'same' or padding == 'valid':
-                self.pad = keras.layers.ZeroPadding2D(padding=0)
-                self.conv = keras.layers.Conv2D(filters=filters,
-                                                kernel_size=kernel_size,
-                                                strides=strides,
-                                                padding=padding,
-                                                use_bias=False)
-            else:
-                raise Exception(f'padding format not implemented. expected integer value\
-                 or \'same\' or \'valid\'. found {padding}')
+            self.pad = keras.layers.ZeroPadding2D(padding=0)
+            self.conv = keras.layers.Conv2D(filters=filters,
+                                            kernel_size=kernel_size,
+                                            strides=strides,
+                                            padding=padding,
+                                            use_bias=False)
         else:
             self.pad = keras.layers.ZeroPadding2D(padding=padding)
             self.conv = keras.layers.Conv2D(filters=filters,
