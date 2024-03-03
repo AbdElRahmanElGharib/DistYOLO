@@ -48,3 +48,40 @@ def dist2bbox(distance, anchor_points):
     x1y1 = anchor_points - left_top
     x2y2 = anchor_points + right_bottom
     return tf.concat((x1y1, x2y2), axis=-1)  # xyxy bbox
+
+
+class PredictionDecoder(keras.Model):
+    def __init__(self, conf_threshold=0.2, iou_threshold=0.7, bounding_box_format='xyxy', *args, **kwargs):
+        super(PredictionDecoder, self).__init__(*args, **kwargs)
+        self.conf_threshold = conf_threshold
+        self.iou_threshold = iou_threshold
+        self.bounding_box_format = bounding_box_format
+        self.boxes_reshape = keras.layers.Reshape(target_shape=(-1, 4, 16))
+        self.nms = layers.NonMaxSuppression(
+                bounding_box_format=self.bounding_box_format,
+                from_logits=False,
+                confidence_threshold=self.conf_threshold,
+                iou_threshold=self.iou_threshold,
+            )
+
+    def call(self, inputs, training=None, mask=None):
+        preds, images = inputs
+
+        boxes = preds[..., :64]
+        scores = preds[..., 64:]
+
+        boxes = self.boxes_reshape(boxes)
+        boxes = tf.nn.softmax(logits=boxes, axis=-1) * tf.range(16, dtype='float32')
+        boxes = tf.math.reduce_sum(boxes, axis=-1)
+
+        anchor_points, stride_tensor = get_anchors(image_shape=images.shape[1:])
+        stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
+        box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
+        box_preds = bounding_box.convert_format(
+            box_preds,
+            source="xyxy",
+            target=self.bounding_box_format,
+            images=images,
+        )
+
+        return self.nms(box_preds, scores)
