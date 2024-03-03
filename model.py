@@ -125,3 +125,50 @@ class FeatureExtractor(keras.Model):
         x = self.layer10_sppf(x)
         p5 = x
         return [p3, p4, p5]
+
+
+class FPNUpSample(keras.Model):
+    def __init__(self, out_channels, depth, *args, **kwargs):
+        super(FPNUpSample, self).__init__(*args, **kwargs)
+        self.up = keras.layers.UpSampling2D(2)
+        self.concat = keras.layers.Concatenate()
+        self.c2f = C2F(out_channels, int(3 * depth), False)
+
+    def call(self, inputs, training=None, mask=None):
+        start, target = inputs
+        x = self.up(start)
+        x = self.concat([x, target])
+        x = self.c2f(x)
+        return x
+
+
+class FPNDownSample(keras.Model):
+    def __init__(self, in_channels, out_channels, depth, *args, **kwargs):
+        super(FPNDownSample, self).__init__(*args, **kwargs)
+        self.conv = Conv(in_channels, 3, 2, 1)
+        self.concat = keras.layers.Concatenate()
+        self.c2f = C2F(out_channels, int(3 * depth), False)
+
+    def call(self, inputs, training=None, mask=None):
+        start, target = inputs
+        x = self.conv(start)
+        x = self.concat([x, target])
+        x = self.c2f(x)
+        return x
+
+
+class FPN(keras.Model):
+    def __init__(self, depth=1.0, width=1.0, ratio=1.0, *args, **kwargs):
+        super(FPN, self).__init__(*args, **kwargs)
+        self.up1 = FPNUpSample(int(512 * width), depth)
+        self.up2 = FPNUpSample(int(256 * width), depth)
+        self.down1 = FPNDownSample(int(256 * width), int(512 * width), depth)
+        self.down2 = FPNDownSample(int(512 * width), int(512 * width * ratio), depth)
+
+    def call(self, inputs, training=None, mask=None):
+        p3, p4, p5 = inputs
+        p4p5 = self.up1(p5, p4)
+        p3p4p5 = self.up2(p4p5, p3)
+        p3p4p5_d1 = self.down1(p3p4p5, p4p5)
+        p3p4p5_d2 = self.down2(p3p4p5_d1, p5)
+        return [p3p4p5, p3p4p5_d1, p3p4p5_d2]
