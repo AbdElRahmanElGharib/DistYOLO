@@ -14,3 +14,19 @@ def maximum(x1, x2):
     elif isinstance(x2, tf.SparseTensor):
         x2 = tf.sparse.to_dense(x2)
     return tf.math.maximum(x1, x2)
+
+
+class YOLO(keras.Model):
+    def __init__(self, num_classes=20, depth=1.0, width=1.0, ratio=1.0, *args, **kwargs):
+        super(YOLO, self).__init__(*args, **kwargs)
+        self.num_classes = num_classes
+        self.feature_extractor = FeatureExtractor(depth, width, ratio)
+        self.fpn = FPN(depth, width, ratio)
+        self.detection_head = DetectionHead(num_classes, width)
+        self.prediction_decoder = PredictionDecoder()
+        self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
+        self.box_loss = CIoULoss(bounding_box_format="xyxy", reduction="sum")
+        self.label_encoder = YOLOV8LabelEncoder(num_classes=num_classes)
+        self.box_loss_weight = 7.5
+        self.classification_loss_weight = 0.5
+        self.build((None, 640, 640, 3))
