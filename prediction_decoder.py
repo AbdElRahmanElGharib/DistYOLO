@@ -1,7 +1,7 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
-from keras_cv.src import layers
+from keras_cv.src.layers import NonMaxSuppression
 
 
 def get_anchors(
@@ -54,7 +54,7 @@ class PredictionDecoder(keras.Model):
     def __init__(self, conf_threshold=0.2, iou_threshold=0.7, *args, **kwargs):
         super(PredictionDecoder, self).__init__(*args, **kwargs)
         self.boxes_reshape = keras.layers.Reshape(target_shape=(-1, 4, 16))
-        self.nms = layers.NonMaxSuppression(
+        self.nms = NonMaxSuppression(
                 bounding_box_format='xyxy',
                 from_logits=False,
                 confidence_threshold=conf_threshold,
@@ -62,10 +62,10 @@ class PredictionDecoder(keras.Model):
             )
 
     def call(self, inputs, training=None, mask=None):
-        preds, images = inputs
+        preds, images = inputs['preds'], inputs['images']
 
-        boxes = preds[..., :64]
-        scores = preds[..., 64:]
+        boxes = preds['boxes']
+        scores = preds['classes']
 
         boxes = self.boxes_reshape(boxes)
         boxes = tf.nn.softmax(logits=boxes, axis=-1) * tf.range(16, dtype='float32')

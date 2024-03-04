@@ -235,7 +235,10 @@ class DetectionHead(keras.Model):
         x3 = self.reshape3(x3)
         x = self.concat_out([x1, x2, x3])
         x = self.act_out(x)
-        return x
+        return {
+            'boxes': x[..., :64],
+            'classes': x[..., 64:]
+        }
 
 
 class SegmentationHead(keras.Model):
