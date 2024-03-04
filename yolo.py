@@ -53,3 +53,8 @@ class YOLO(keras.Model):
         x = self.fpn(x)
         x = self.detection_head(x)
         return x
+
+    def predict_step(self, *args):
+        outputs = super(YOLO, self).predict_step(*args)
+
+        return self.prediction_decoder({'preds': outputs, 'images': args[-1]})
