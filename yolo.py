@@ -46,3 +46,10 @@ class YOLO(keras.Model):
         }
 
         super(YOLO, self).compile(loss=losses, **kwargs)
+
+    def call(self, inputs, training=None, mask=None):
+        x = tf.image.resize(inputs, (640, 640))
+        x = self.feature_extractor(x)
+        x = self.fpn(x)
+        x = self.detection_head(x)
+        return x
