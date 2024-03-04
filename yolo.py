@@ -30,3 +30,19 @@ class YOLO(keras.Model):
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 0.5
         self.build((None, 640, 640, 3))
+
+    def compile(
+        self,
+        box_loss_weight=7.5,
+        classification_loss_weight=0.5,
+        **kwargs,
+    ):
+        self.box_loss_weight = box_loss_weight
+        self.classification_loss_weight = classification_loss_weight
+
+        losses = {
+            "box": self.box_loss,
+            "class": self.classification_loss,
+        }
+
+        super(YOLO, self).compile(loss=losses, **kwargs)
