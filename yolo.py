@@ -1,4 +1,3 @@
-import keras.layers
 from model import *
 from prediction_decoder import *
 from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder
