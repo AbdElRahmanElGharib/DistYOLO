@@ -1,7 +1,7 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
-from keras_cv.src.layers import NonMaxSuppression
+from non_max_suppression import NonMaxSuppression
 
 
 def get_anchors(
