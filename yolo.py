@@ -2,7 +2,7 @@ import keras.layers
 from model import *
 from prediction_decoder import *
 from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder
-from keras_cv.src.losses.ciou_loss import CIoULoss
+from loss import CIoULoss
 
 
 def maximum(x1, x2):
