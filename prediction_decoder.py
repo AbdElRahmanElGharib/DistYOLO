@@ -55,8 +55,6 @@ class PredictionDecoder(keras.Model):
         super(PredictionDecoder, self).__init__(*args, **kwargs)
         self.boxes_reshape = keras.layers.Reshape(target_shape=(-1, 4, 16))
         self.nms = NonMaxSuppression(
-                bounding_box_format='xyxy',
-                from_logits=False,
                 confidence_threshold=conf_threshold,
                 iou_threshold=iou_threshold,
             )

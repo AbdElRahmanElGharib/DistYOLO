@@ -16,7 +16,7 @@ class YOLO(keras.Model):
         self.detection_head = DetectionHead(num_classes, width)
         self.prediction_decoder = PredictionDecoder()
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
-        self.box_loss = CIoULoss(bounding_box_format="xyxy", reduction="sum")
+        self.box_loss = CIoULoss(reduction="sum")
         self.label_encoder = YOLOV8LabelEncoder(num_classes=num_classes)
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 0.5
