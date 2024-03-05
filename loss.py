@@ -86,5 +86,26 @@ class CIoULoss(keras.losses.Loss):
     def call(self, y_true, y_pred):
         y_pred = tf.convert_to_tensor(y_pred)
         y_true = tf.cast(y_true, y_pred.dtype)
+
+        if y_pred.shape[-1] != 4:
+            raise ValueError(
+                "CIoULoss expects y_pred.shape[-1] to be 4 to represent the "
+                f"bounding boxes. Received y_pred.shape[-1]={y_pred.shape[-1]}."
+            )
+
+        if y_true.shape[-1] != 4:
+            raise ValueError(
+                "CIoULoss expects y_true.shape[-1] to be 4 to represent the "
+                f"bounding boxes. Received y_true.shape[-1]={y_true.shape[-1]}."
+            )
+
+        if y_true.shape[-2] != y_pred.shape[-2]:
+            raise ValueError(
+                "CIoULoss expects number of boxes in y_pred to be equal to the "
+                "number of boxes in y_true. Received number of boxes in "
+                f"y_true={y_true.shape[-2]} and number of boxes in "
+                f"y_pred={y_pred.shape[-2]}."
+            )
+
         ciou = compute_ciou(y_true, y_pred)
         return 1 - ciou
