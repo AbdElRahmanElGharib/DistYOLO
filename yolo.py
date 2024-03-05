@@ -3,7 +3,7 @@ import keras
 # import tensorflow.keras as keras
 from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
-from label_encoder import YOLOV8LabelEncoder
+from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
 
 
@@ -17,7 +17,7 @@ class YOLO(keras.Model):
         self.prediction_decoder = PredictionDecoder()
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.box_loss = CIoULoss(reduction="sum")
-        self.label_encoder = YOLOV8LabelEncoder(num_classes=num_classes)
+        self.label_encoder = LabelEncoder(num_classes=num_classes)
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 0.5
         self.build((None, 640, 640, 3))
