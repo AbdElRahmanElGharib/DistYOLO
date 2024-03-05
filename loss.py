@@ -76,3 +76,11 @@ def compute_ciou(boxes1, boxes2):
     return iou - (
         centers_distance_squared / convex_diagonal_squared + v * alpha
     )
+
+
+class CIoULoss(keras.losses.Loss):
+    def __init__(self, eps=1e-7, **kwargs):
+        pass
+
+    def call(self, y_true, y_pred):
+        pass
