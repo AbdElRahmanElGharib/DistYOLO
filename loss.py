@@ -24,3 +24,55 @@ def minimum(x1, x2):
     elif isinstance(x2, tf.SparseTensor):
         x2 = tf.sparse.to_dense(x2)
     return tf.math.minimum(x1, x2)
+
+
+def compute_ciou(boxes1, boxes2):
+    x_min1, y_min1, x_max1, y_max1 = tf.split(boxes1[..., :4], 4, axis=-1)
+    x_min2, y_min2, x_max2, y_max2 = tf.split(boxes2[..., :4], 4, axis=-1)
+
+    width_1 = x_max1 - x_min1
+    height_1 = y_max1 - y_min1 + keras.backend.epsilon()
+    width_2 = x_max2 - x_min2
+    height_2 = y_max2 - y_min2 + keras.backend.epsilon()
+
+    intersection_area = maximum(
+        minimum(x_max1, x_max2) - maximum(x_min1, x_min2), 0
+    ) * maximum(
+        minimum(y_max1, y_max2) - maximum(y_min1, y_min2), 0
+    )
+    union_area = (
+        width_1 * height_1
+        + width_2 * height_2
+        - intersection_area
+        + keras.backend.epsilon()
+    )
+    iou = tf.squeeze(
+        tf.divide(intersection_area, union_area + keras.backend.epsilon()),
+        axis=-1,
+    )
+
+    convex_width = maximum(x_max1, x_max2) - minimum(x_min1, x_min2)
+    convex_height = maximum(y_max1, y_max2) - minimum(y_min1, y_min2)
+    convex_diagonal_squared = tf.squeeze(
+        convex_width**2 + convex_height**2 + keras.backend.epsilon(),
+        axis=-1,
+    )
+    centers_distance_squared = tf.squeeze(
+        ((x_min1 + x_max1) / 2 - (x_min2 + x_max2) / 2) ** 2
+        + ((y_min1 + y_max1) / 2 - (y_min2 + y_max2) / 2) ** 2,
+        axis=-1,
+    )
+
+    v = tf.squeeze(
+        tf.pow(
+            (4 / math.pi**2)
+            * (tf.math.atan(width_2 / height_2) - tf.atan(width_1 / height_1)),
+            2,
+        ),
+        axis=-1,
+    )
+    alpha = v / (v - iou + (1 + keras.backend.epsilon()))
+
+    return iou - (
+        centers_distance_squared / convex_diagonal_squared + v * alpha
+    )
