@@ -80,7 +80,8 @@ def compute_ciou(boxes1, boxes2):
 
 class CIoULoss(keras.losses.Loss):
     def __init__(self, eps=1e-7, **kwargs):
-        pass
+        super(CIoULoss, self).__init__(**kwargs)
+        self.eps = eps
 
     def call(self, y_true, y_pred):
         pass
