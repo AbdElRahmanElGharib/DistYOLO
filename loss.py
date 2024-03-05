@@ -84,4 +84,7 @@ class CIoULoss(keras.losses.Loss):
         self.eps = eps
 
     def call(self, y_true, y_pred):
-        pass
+        y_pred = tf.convert_to_tensor(y_pred)
+        y_true = tf.cast(y_true, y_pred.dtype)
+        ciou = compute_ciou(y_true, y_pred)
+        return 1 - ciou
