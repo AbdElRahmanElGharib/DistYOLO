@@ -50,7 +50,7 @@ class LabelEncoder(keras.layers.Layer):
 
     def assign(self, scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask):
         num_anchors = anchors.shape[0]
-
+        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         bbox_scores = tf.experimental.numpy.take_along_axis(
             scores,
             tf.cast(maximum(gt_labels[:, None, :], 0), "int32"),
@@ -108,7 +108,7 @@ class LabelEncoder(keras.layers.Layer):
         gt_box_matches_per_anchor_mask = tf.math.reduce_max(overlaps, axis=1) > 0
 
         gt_box_matches_per_anchor = tf.cast(gt_box_matches_per_anchor, "int32")
-
+        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         bbox_labels = tf.experimental.numpy.take_along_axis(
             gt_bboxes,
             gt_box_matches_per_anchor[:, :, None],
@@ -119,6 +119,7 @@ class LabelEncoder(keras.layers.Layer):
             bbox_labels,
             -1
         )
+        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         class_labels = tf.experimental.numpy.take_along_axis(
             gt_labels,
             gt_box_matches_per_anchor,
