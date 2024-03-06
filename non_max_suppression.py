@@ -18,4 +18,38 @@ class NonMaxSuppression(keras.layers.Layer):
         self.built = True
 
     def call(self, inputs, *args, **kwargs):
-        pass
+        box_prediction, class_prediction = inputs['boxes'], inputs['classes']
+
+        confidence_prediction = tf.math.reduce_max(class_prediction, axis=-1)
+
+        idx, valid_det = tf.image.non_max_suppression_padded(
+            box_prediction,
+            confidence_prediction,
+            max_output_size=self.max_detections,
+            iou_threshold=self.iou_threshold,
+            score_threshold=self.confidence_threshold,
+            pad_to_max_output_size=True,
+            sorted_input=False,
+        )
+
+        box_prediction = tf.experimental.numpy.take_along_axis(
+            box_prediction, tf.expand_dims(idx, axis=-1), axis=1
+        )
+        box_prediction = tf.reshape(
+            box_prediction, (-1, self.max_detections, 4)
+        )
+        confidence_prediction = tf.experimental.numpy.take_along_axis(
+            confidence_prediction, idx, axis=1
+        )
+        class_prediction = tf.experimental.numpy.take_along_axis(
+            class_prediction, tf.expand_dims(idx, axis=-1), axis=1
+        )
+
+        bounding_boxes = {
+            "boxes": box_prediction,
+            "confidence": confidence_prediction,
+            "classes": tf.argmax(class_prediction, axis=-1),
+            "num_detections": valid_det,
+        }
+
+        return bounding_boxes
