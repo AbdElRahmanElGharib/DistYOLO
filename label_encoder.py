@@ -32,4 +32,9 @@ class LabelEncoder(keras.layers.Layer):
         self.epsilon = epsilon
 
     def call(self, inputs, *args, **kwargs):
-        pass
+        scores = inputs['scores']
+        decode_bboxes = inputs['decode_bboxes']
+        anchors = inputs['anchors']
+        gt_labels = inputs['gt_labels']
+        gt_bboxes = inputs['gt_bboxes']
+        gt_mask = inputs['gt_mask']

@@ -64,12 +64,14 @@ class YOLO(keras.Model):
         pred_boxes = dist2bbox(pred_boxes, anchor_points)
 
         target_boxes, target_scores, fg_mask = self.label_encoder(
-            pred_scores,
-            tf.expand_dims(tf.cast(pred_boxes * stride_tensor, true_boxes.dtype), axis=0),
-            anchor_points * stride_tensor,
-            true_labels,
-            true_boxes,
-            mask_gt,
+            {
+                'scores': pred_scores,
+                'decode_bboxes': tf.expand_dims(tf.cast(pred_boxes * stride_tensor, true_boxes.dtype), axis=0),
+                'anchors': anchor_points * stride_tensor,
+                'gt_labels': true_labels,
+                'gt_bboxes': true_boxes,
+                'gt_mask': mask_gt
+            }
         )
 
         target_boxes /= stride_tensor
