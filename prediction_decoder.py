@@ -73,4 +73,4 @@ class PredictionDecoder(keras.Model):
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
         box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
 
-        return self.nms(box_preds, scores)
+        return self.nms({'boxes': box_preds, 'classes': scores})
