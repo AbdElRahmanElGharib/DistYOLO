@@ -1,7 +1,7 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
-from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder as LaE
+from loss import maximum, compute_ciou
 
 
 def convert_bounding_box_to_dense(bounding_boxes):
@@ -31,8 +31,7 @@ def is_anchor_center_within_box(anchors, gt_bboxes):
     )
 
 
-# class LabelEncoder(keras.layers.Layer):
-class LabelEncoder(LaE):
+class LabelEncoder(keras.layers.Layer):
     def __init__(
             self,
             num_classes,
@@ -48,6 +47,126 @@ class LabelEncoder(LaE):
         self.alpha = alpha
         self.beta = beta
         self.epsilon = epsilon
+
+    def assign(self, scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask):
+        num_anchors = anchors.shape[0]
+
+        bbox_scores = tf.experimental.numpy.take_along_axis(
+            scores,
+            tf.cast(maximum(gt_labels[:, None, :], 0), "int32"),
+            axis=-1,
+        )
+        bbox_scores = tf.transpose(
+            bbox_scores,
+            (0, 2, 1)
+        )
+
+        overlaps = compute_ciou(
+            tf.expand_dims(gt_bboxes, axis=2),
+            tf.expand_dims(decode_bboxes, axis=1)
+        )
+
+        alignment_metrics = tf.pow(bbox_scores, self.alpha) * tf.pow(overlaps, self.beta)
+        alignment_metrics = tf.where(
+            gt_mask,
+            alignment_metrics,
+            0
+        )
+
+        matching_anchors_in_gt_boxes = is_anchor_center_within_box(
+            anchors,
+            gt_bboxes
+        )
+
+        alignment_metrics = tf.where(
+            matching_anchors_in_gt_boxes,
+            alignment_metrics,
+            0
+        )
+
+        candidate_metrics, candidate_idxs = tf.math.top_k(
+            alignment_metrics,
+            self.max_anchor_matches,
+            sorted=True
+        )
+        candidate_idxs = tf.where(candidate_metrics > 0, candidate_idxs, -1)
+
+        anchors_matched_gt_box = tf.zeros_like(overlaps)
+        for k in range(self.max_anchor_matches):
+            anchors_matched_gt_box += tf.one_hot(
+                candidate_idxs[:, :, k],
+                num_anchors,
+                axis=-1
+            )
+
+        overlaps *= anchors_matched_gt_box
+
+        gt_box_matches_per_anchor = tf.argmax(
+            overlaps,
+            axis=1
+        )
+        gt_box_matches_per_anchor_mask = tf.math.reduce_max(overlaps, axis=1) > 0
+
+        gt_box_matches_per_anchor = tf.cast(gt_box_matches_per_anchor, "int32")
+
+        bbox_labels = tf.experimental.numpy.take_along_axis(
+            gt_bboxes,
+            gt_box_matches_per_anchor[:, :, None],
+            axis=1
+        )
+        bbox_labels = tf.where(
+            gt_box_matches_per_anchor_mask[:, :, None],
+            bbox_labels,
+            -1
+        )
+        class_labels = tf.experimental.numpy.take_along_axis(
+            gt_labels,
+            gt_box_matches_per_anchor,
+            axis=1
+        )
+        class_labels = tf.where(
+            gt_box_matches_per_anchor_mask,
+            class_labels,
+            -1
+        )
+
+        class_labels = tf.one_hot(
+            tf.cast(class_labels, "int32"),
+            self.num_classes,
+            axis=-1
+        )
+
+        alignment_metrics *= anchors_matched_gt_box
+        max_alignment_per_gt_box = tf.math.reduce_max(
+            alignment_metrics,
+            axis=-1,
+            keepdims=True
+        )
+        max_overlap_per_gt_box = tf.math.reduce_max(
+            overlaps,
+            axis=-1,
+            keepdims=True
+        )
+
+        normalized_alignment_metrics = tf.math.reduce_max(
+            alignment_metrics
+            * max_overlap_per_gt_box
+            / (max_alignment_per_gt_box + self.epsilon),
+            axis=-2,
+        )
+        class_labels *= normalized_alignment_metrics[:, :, None]
+
+        bbox_labels = tf.reshape(
+            bbox_labels,
+            (-1, num_anchors, 4)
+        )
+        return (
+            tf.stop_gradient(bbox_labels),
+            tf.stop_gradient(class_labels),
+            tf.stop_gradient(
+                tf.cast(gt_box_matches_per_anchor > -1, "float32")
+            ),
+        )
 
     def call(self, inputs, *args, **kwargs):
         scores = inputs['scores']
