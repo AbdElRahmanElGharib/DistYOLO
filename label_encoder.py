@@ -12,3 +12,24 @@ def is_anchor_center_within_box(anchors, gt_bboxes):
         ),
         axis=-1,
     )
+
+
+class LabelEncoder(keras.layers.Layer):
+    def __init__(
+            self,
+            num_classes,
+            max_anchor_matches=10,
+            alpha=0.5,
+            beta=6.0,
+            epsilon=1e-9,
+            **kwargs
+    ):
+        super(LabelEncoder, self).__init__(**kwargs)
+        self.num_classes = num_classes
+        self.max_anchor_matches = max_anchor_matches
+        self.alpha = alpha
+        self.beta = beta
+        self.epsilon = epsilon
+
+    def call(self, inputs, *args, **kwargs):
+        pass
