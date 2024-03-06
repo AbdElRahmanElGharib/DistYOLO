@@ -4,6 +4,23 @@ import keras
 from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder as LaE
 
 
+def convert_bounding_box_to_dense(bounding_boxes):
+    if isinstance(bounding_boxes["classes"], tf.RaggedTensor):
+        bounding_boxes["classes"] = bounding_boxes["classes"].to_tensor(
+            default_value=-1,
+            shape=None
+        )
+
+    if isinstance(bounding_boxes["boxes"], tf.RaggedTensor):
+        shape = list(bounding_boxes["boxes"].shape)
+        shape[-1] = 4
+        bounding_boxes["boxes"] = bounding_boxes["boxes"].to_tensor(
+            default_value=-1,
+            shape=shape
+        )
+    return bounding_boxes
+
+
 def is_anchor_center_within_box(anchors, gt_bboxes):
     return tf.math.reduce_all(
         tf.math.logical_and(
@@ -41,8 +58,11 @@ class LabelEncoder(LaE):
         gt_mask = inputs['gt_mask']
 
         if isinstance(gt_bboxes, tf.RaggedTensor):
-            dense_bounding_boxes = bounding_box.to_dense(
-                {"boxes": gt_bboxes, "classes": gt_labels},
+            dense_bounding_boxes = convert_bounding_box_to_dense(
+                {
+                    "boxes": gt_bboxes,
+                    "classes": gt_labels
+                }
             )
             gt_bboxes = dense_bounding_boxes["boxes"]
             gt_labels = dense_bounding_boxes["classes"]
