@@ -1,7 +1,7 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
-from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder as LabelEncoder
+from keras_cv.src.models.object_detection.yolo_v8.yolo_v8_label_encoder import YOLOV8LabelEncoder as LaE
 
 
 def is_anchor_center_within_box(anchors, gt_bboxes):
@@ -14,7 +14,8 @@ def is_anchor_center_within_box(anchors, gt_bboxes):
     )
 
 
-class LabelEncoder(keras.layers.Layer):
+# class LabelEncoder(keras.layers.Layer):
+class LabelEncoder(LaE):
     def __init__(
             self,
             num_classes,
@@ -38,3 +39,32 @@ class LabelEncoder(keras.layers.Layer):
         gt_labels = inputs['gt_labels']
         gt_bboxes = inputs['gt_bboxes']
         gt_mask = inputs['gt_mask']
+
+        if isinstance(gt_bboxes, tf.RaggedTensor):
+            dense_bounding_boxes = bounding_box.to_dense(
+                {"boxes": gt_bboxes, "classes": gt_labels},
+            )
+            gt_bboxes = dense_bounding_boxes["boxes"]
+            gt_labels = dense_bounding_boxes["classes"]
+
+        if isinstance(gt_mask, tf.RaggedTensor):
+            gt_mask = gt_mask.to_tensor()
+
+        max_num_boxes = tf.shape(gt_bboxes)[1]
+
+        # If there are no GT boxes in the batch, we short-circuit and return
+        # empty targets to avoid NaNs.
+        return tf.cond(
+            tf.constant(max_num_boxes > 0),
+            lambda: self.assign(
+                scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask
+            ),
+            lambda: (
+                tf.zeros_like(decode_bboxes),
+                tf.zeros_like(scores),
+                tf.zeros_like(scores[..., 0]),
+            ),
+        )
+
+    def count_params(self):
+        return 0
