@@ -5,6 +5,7 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
+from metrics import MeanAveragePrecision
 
 
 class YOLO(keras.Model):
@@ -18,6 +19,7 @@ class YOLO(keras.Model):
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.box_loss = CIoULoss(reduction="sum")
         self.label_encoder = LabelEncoder(num_classes=num_classes)
+        self.map = MeanAveragePrecision()
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 0.5
         self.build((None, 640, 640, 3))
@@ -36,7 +38,7 @@ class YOLO(keras.Model):
             "class": self.classification_loss,
         }
 
-        super(YOLO, self).compile(loss=losses, **kwargs)
+        super(YOLO, self).compile(loss=losses, metrics=[self.map], **kwargs)
 
     def call(self, inputs, training=None, mask=None):
         x = tf.image.resize(inputs, (640, 640))
@@ -94,8 +96,15 @@ class YOLO(keras.Model):
             "class": self.classification_loss_weight / target_scores_sum,
         }
 
-        return super().compute_loss(
+        return super(YOLO, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
+        )
+
+    def compute_metrics(self, x, y, y_pred, sample_weight):
+        y_pred = self.prediction_decoder({'preds': y_pred, 'images': x})
+
+        return super(YOLO, self).compute_metrics(
+            x=x, y=y, y_pred=y_pred, sample_weight=sample_weight
         )
 
     def predict_step(self, *args):
