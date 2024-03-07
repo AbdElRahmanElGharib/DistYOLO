@@ -241,6 +241,7 @@ class DetectionHead(keras.Model):
         }
 
 
+# TODO: implement SegmentationHead
 class SegmentationHead(keras.Model):
     def __init__(self, *args, **kwargs):
         super(SegmentationHead, self).__init__(*args, **kwargs)
