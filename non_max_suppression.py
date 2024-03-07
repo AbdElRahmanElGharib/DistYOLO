@@ -31,18 +31,16 @@ class NonMaxSuppression(keras.layers.Layer):
             pad_to_max_output_size=True,
             sorted_input=False,
         )
-        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
+
         box_prediction = tf.experimental.numpy.take_along_axis(
             box_prediction, tf.expand_dims(idx, axis=-1), axis=1
         )
         box_prediction = tf.reshape(
             box_prediction, (-1, self.max_detections, 4)
         )
-        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         confidence_prediction = tf.experimental.numpy.take_along_axis(
             confidence_prediction, idx, axis=1
         )
-        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         class_prediction = tf.experimental.numpy.take_along_axis(
             class_prediction, tf.expand_dims(idx, axis=-1), axis=1
         )
