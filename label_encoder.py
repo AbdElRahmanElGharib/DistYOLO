@@ -192,10 +192,8 @@ class LabelEncoder(keras.layers.Layer):
 
         max_num_boxes = tf.shape(gt_bboxes)[1]
 
-        # If there are no GT boxes in the batch, we short-circuit and return
-        # empty targets to avoid NaNs.
         return tf.cond(
-            tf.constant(max_num_boxes > 0),
+            max_num_boxes > 0,
             lambda: self.assign(
                 scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask
             ),
