@@ -17,23 +17,28 @@ class YOLO(keras.Model):
         self.prediction_decoder = PredictionDecoder()
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.box_loss = CIoULoss(reduction="sum")
+        self.distance_loss = keras.losses.MeanSquaredError(reduction="sum")
         self.label_encoder = LabelEncoder(num_classes=num_classes)
         self.box_loss_weight = 7.5
-        self.classification_loss_weight = 0.5
+        self.classification_loss_weight = 1.5
+        self.distance_loss_weight = 1.0
         self.build((None, 640, 640, 3))
 
     def compile(
         self,
         box_loss_weight=7.5,
-        classification_loss_weight=0.5,
+        classification_loss_weight=1.5,
+        distance_loss_weight=1.0,
         **kwargs,
     ):
         self.box_loss_weight = box_loss_weight
         self.classification_loss_weight = classification_loss_weight
+        self.distance_loss_weight = distance_loss_weight
 
         losses = {
             "box": self.box_loss,
             "class": self.classification_loss,
+            "distance": self.distance_loss
         }
 
         super(YOLO, self).compile(loss=losses, **kwargs)
@@ -48,6 +53,7 @@ class YOLO(keras.Model):
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
         pred_boxes = y_pred['boxes']
         pred_scores = y_pred['classes']
+        pred_dist = y_pred['distances']
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
@@ -58,6 +64,7 @@ class YOLO(keras.Model):
 
         true_labels = y["classes"]
         true_boxes = y["boxes"]
+        true_dist = y["distances"]
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
 
@@ -84,14 +91,17 @@ class YOLO(keras.Model):
         y_true = {
             "box": target_boxes * fg_mask[..., None],
             "class": target_scores,
+            "distance": target_dist  # TODO: Define target_dist
         }
         y_pred = {
             "box": pred_boxes * fg_mask[..., None],
             "class": pred_scores,
+            "distance": pred_dist
         }
         sample_weights = {
             "box": self.box_loss_weight * box_weight / target_scores_sum,
             "class": self.classification_loss_weight / target_scores_sum,
+            "distance": self.distance_loss_weight / target_scores_sum
         }
 
         return super().compute_loss(
