@@ -11,6 +11,12 @@ def convert_bounding_box_to_dense(bounding_boxes):
             shape=None
         )
 
+    if isinstance(bounding_boxes["distances"], tf.RaggedTensor):
+        bounding_boxes["distances"] = bounding_boxes["distances"].to_tensor(
+            default_value=-1,
+            shape=None
+        )
+
     if isinstance(bounding_boxes["boxes"], tf.RaggedTensor):
         shape = list(bounding_boxes["boxes"].shape)
         shape[-1] = 4
@@ -130,7 +136,7 @@ class LabelEncoder(keras.layers.Layer):
             class_labels,
             -1
         )
-
+        # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         dist_labels = tf.experimental.numpy.take_along_axis(
             gt_distances,
             gt_box_matches_per_anchor,

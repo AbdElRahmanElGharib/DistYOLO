@@ -259,7 +259,7 @@ class DetectionHead(keras.Model):
         return {
             'boxes': x[..., :64],
             'classes': x[..., 64:-1],
-            'distances': x[..., -1]
+            'distances': tf.expand_dims(x[..., -1], axis=-1)
         }
 
 

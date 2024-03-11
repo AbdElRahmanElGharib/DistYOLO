@@ -48,7 +48,7 @@ class NonMaxSuppression(keras.layers.Layer):
         )
         # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         dist_prediction = tf.experimental.numpy.take_along_axis(
-            dist_prediction, idx, axis=1
+            dist_prediction[..., 0], idx, axis=1
         )
 
         bounding_boxes = {
