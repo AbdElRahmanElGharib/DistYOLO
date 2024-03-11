@@ -64,6 +64,7 @@ class PredictionDecoder(keras.Model):
 
         boxes = preds['boxes']
         scores = preds['classes']
+        distances = preds['distances']
 
         boxes = self.boxes_reshape(boxes)
         boxes = tf.nn.softmax(logits=boxes, axis=-1) * tf.range(16, dtype='float32')
@@ -73,4 +74,4 @@ class PredictionDecoder(keras.Model):
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
         box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
 
-        return self.nms({'boxes': box_preds, 'classes': scores})
+        return self.nms({'boxes': box_preds, 'classes': scores, 'distances': distances})
