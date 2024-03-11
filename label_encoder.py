@@ -48,7 +48,7 @@ class LabelEncoder(keras.layers.Layer):
         self.beta = beta
         self.epsilon = epsilon
 
-    def assign(self, scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask):
+    def assign(self, scores, decode_bboxes, distances, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask):
         num_anchors = anchors.shape[0]
         # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         bbox_scores = tf.experimental.numpy.take_along_axis(
@@ -131,6 +131,17 @@ class LabelEncoder(keras.layers.Layer):
             -1
         )
 
+        dist_labels = tf.experimental.numpy.take_along_axis(
+            gt_distances,
+            gt_box_matches_per_anchor,
+            axis=1
+        )
+        dist_labels = tf.where(
+            gt_box_matches_per_anchor_mask,
+            dist_labels,
+            -1
+        )
+
         class_labels = tf.one_hot(
             tf.cast(class_labels, "int32"),
             self.num_classes,
@@ -155,7 +166,9 @@ class LabelEncoder(keras.layers.Layer):
             / (max_alignment_per_gt_box + self.epsilon),
             axis=-2,
         )
+
         class_labels *= normalized_alignment_metrics[:, :, None]
+        dist_labels *= normalized_alignment_metrics[:, :, None]
 
         bbox_labels = tf.reshape(
             bbox_labels,
@@ -164,6 +177,7 @@ class LabelEncoder(keras.layers.Layer):
         return (
             tf.stop_gradient(bbox_labels),
             tf.stop_gradient(class_labels),
+            tf.stop_gradient(dist_labels),
             tf.stop_gradient(
                 tf.cast(gt_box_matches_per_anchor > -1, "float32")
             ),
@@ -172,20 +186,24 @@ class LabelEncoder(keras.layers.Layer):
     def call(self, inputs, *args, **kwargs):
         scores = inputs['scores']
         decode_bboxes = inputs['decode_bboxes']
+        distances = inputs['distances']
         anchors = inputs['anchors']
         gt_labels = inputs['gt_labels']
         gt_bboxes = inputs['gt_bboxes']
         gt_mask = inputs['gt_mask']
+        gt_distances = inputs['gt_distances']
 
         if isinstance(gt_bboxes, tf.RaggedTensor):
             dense_bounding_boxes = convert_bounding_box_to_dense(
                 {
                     "boxes": gt_bboxes,
-                    "classes": gt_labels
+                    "classes": gt_labels,
+                    "distances": gt_distances
                 }
             )
             gt_bboxes = dense_bounding_boxes["boxes"]
             gt_labels = dense_bounding_boxes["classes"]
+            gt_distances = dense_bounding_boxes["distances"]
 
         if isinstance(gt_mask, tf.RaggedTensor):
             gt_mask = gt_mask.to_tensor()
@@ -195,11 +213,12 @@ class LabelEncoder(keras.layers.Layer):
         return tf.cond(
             max_num_boxes > 0,
             lambda: self.assign(
-                scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_mask
+                scores, decode_bboxes, distances, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask
             ),
             lambda: (
                 tf.zeros_like(decode_bboxes),
                 tf.zeros_like(scores),
+                tf.zeros_like(distances),
                 tf.zeros_like(scores[..., 0]),
             ),
         )
