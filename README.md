@@ -99,3 +99,7 @@ For questions, comments, or support, please use the comments section of the repo
 ## Additional Information
 
 Please note that this project is still under active development. Use with CAUTION!
+
+## Change Log
+
+added distance estimation
