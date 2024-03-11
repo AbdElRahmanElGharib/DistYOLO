@@ -188,8 +188,14 @@ class DetectionHead(keras.Model):
             keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
             keras.layers.Activation(activation=tf.nn.sigmoid)
         ])
+        self.distance_1 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+        ])
         self.concat1 = keras.layers.Concatenate(axis=-1)
-        self.reshape1 = keras.layers.Reshape(target_shape=(-1, num_classes+64))
+        self.reshape1 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
         self.boxes2 = keras.Sequential(layers=[
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
@@ -201,8 +207,14 @@ class DetectionHead(keras.Model):
             keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
             keras.layers.Activation(activation=tf.nn.sigmoid)
         ])
+        self.distance_2 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+        ])
         self.concat2 = keras.layers.Concatenate(axis=-1)
-        self.reshape2 = keras.layers.Reshape(target_shape=(-1, num_classes + 64))
+        self.reshape2 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
         self.boxes3 = keras.Sequential(layers=[
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
@@ -214,8 +226,14 @@ class DetectionHead(keras.Model):
             keras.layers.Conv2D(filters=num_classes, kernel_size=1, strides=1),
             keras.layers.Activation(activation=tf.nn.sigmoid)
         ])
+        self.distance_3 = keras.Sequential(layers=[
+            Conv(int(256 * width), 3, 1, 1),
+            Conv(int(256 * width), 3, 1, 1),
+            keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
+            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+        ])
         self.concat3 = keras.layers.Concatenate(axis=-1)
-        self.reshape3 = keras.layers.Reshape(target_shape=(-1, num_classes + 64))
+        self.reshape3 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
         self.concat_out = keras.layers.Concatenate(axis=-2)
         self.act_out = keras.layers.Activation(activation='linear', dtype='float32')
 
@@ -223,21 +241,25 @@ class DetectionHead(keras.Model):
         p3p4p5, p3p4p5_d1, p3p4p5_d2 = inputs
         x1_boxes = self.boxes1(p3p4p5)
         x1_classes = self.classes1(p3p4p5)
-        x1 = self.concat1([x1_boxes, x1_classes])
+        x1_distance = self.distance_1(p3p4p5)
+        x1 = self.concat1([x1_boxes, x1_classes, x1_distance])
         x1 = self.reshape1(x1)
         x2_boxes = self.boxes2(p3p4p5_d1)
         x2_classes = self.classes2(p3p4p5_d1)
-        x2 = self.concat2([x2_boxes, x2_classes])
+        x2_distance = self.distance_2(p3p4p5_d1)
+        x2 = self.concat2([x2_boxes, x2_classes, x2_distance])
         x2 = self.reshape2(x2)
         x3_boxes = self.boxes3(p3p4p5_d2)
         x3_classes = self.classes3(p3p4p5_d2)
-        x3 = self.concat3([x3_boxes, x3_classes])
+        x3_distance = self.distance_3(p3p4p5_d2)
+        x3 = self.concat3([x3_boxes, x3_classes, x3_distance])
         x3 = self.reshape3(x3)
         x = self.concat_out([x1, x2, x3])
         x = self.act_out(x)
         return {
             'boxes': x[..., :64],
-            'classes': x[..., 64:]
+            'classes': x[..., 64:-1],
+            'distances': x[..., -1]
         }
 
 
