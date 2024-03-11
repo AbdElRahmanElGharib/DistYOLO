@@ -38,6 +38,7 @@ class MeanAveragePrecision(keras.metrics.Metric):
     def __init__(self, num_classes, *args, **kwargs):
         super(MeanAveragePrecision, self).__init__(name='mAP', *args, **kwargs)
         self.num_classes = num_classes
+        self.average_precision = self.add_weight(name='AP', shape=(10, num_classes), initializer='zeros')
 
     def update_state(
             self,
