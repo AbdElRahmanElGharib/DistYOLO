@@ -192,7 +192,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+            keras.layers.Activation(activation=tf.nn.leaky_relu)
         ])
         self.concat1 = keras.layers.Concatenate(axis=-1)
         self.reshape1 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
@@ -211,7 +211,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+            keras.layers.Activation(activation=tf.nn.leaky_relu)
         ])
         self.concat2 = keras.layers.Concatenate(axis=-1)
         self.reshape2 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
@@ -230,7 +230,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=tf.nn.leaky_relu(alpha=0.1))
+            keras.layers.Activation(activation=tf.nn.leaky_relu)
         ])
         self.concat3 = keras.layers.Concatenate(axis=-1)
         self.reshape3 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
