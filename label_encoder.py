@@ -54,7 +54,7 @@ class LabelEncoder(keras.layers.Layer):
         self.beta = beta
         self.epsilon = epsilon
 
-    def assign(self, scores, decode_bboxes, distances, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask):
+    def assign(self, scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask):
         num_anchors = anchors.shape[0]
         # TODO: use tf.gather_nd instead of tf.experimental.numpy.take_along_axis
         bbox_scores = tf.experimental.numpy.take_along_axis(
@@ -219,7 +219,7 @@ class LabelEncoder(keras.layers.Layer):
         return tf.cond(
             max_num_boxes > 0,
             lambda: self.assign(
-                scores, decode_bboxes, distances, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask
+                scores, decode_bboxes, anchors, gt_labels, gt_bboxes, gt_distances, gt_mask
             ),
             lambda: (
                 tf.zeros_like(decode_bboxes),
