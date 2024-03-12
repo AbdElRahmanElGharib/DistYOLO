@@ -172,6 +172,7 @@ class LabelEncoder(keras.layers.Layer):
             / (max_alignment_per_gt_box + self.epsilon),
             axis=-2,
         )
+        dist_labels = tf.expand_dims(dist_labels, axis=-1)
 
         class_labels *= normalized_alignment_metrics[:, :, None]
         dist_labels *= normalized_alignment_metrics[:, :, None]

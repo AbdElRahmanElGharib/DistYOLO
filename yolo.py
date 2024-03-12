@@ -55,7 +55,7 @@ class YOLO(keras.Model):
         pred_scores = y_pred['classes']
         pred_dist = y_pred['distances']
 
-        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 4, 16))
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 8400, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
@@ -68,12 +68,12 @@ class YOLO(keras.Model):
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
 
-        pred_boxes = dist2bbox(pred_boxes, anchor_points)
+        pred_boxes = dist2bbox(pred_boxes, tf.expand_dims(anchor_points, axis=0))
 
         target_boxes, target_scores, target_dist, fg_mask = self.label_encoder(
             {
                 'scores': pred_scores,
-                'decode_bboxes': tf.expand_dims(tf.cast(pred_boxes * stride_tensor, true_boxes.dtype), axis=0),
+                'decode_bboxes': tf.cast(pred_boxes * stride_tensor, true_boxes.dtype),
                 'distances': pred_dist,
                 'anchors': anchor_points * stride_tensor,
                 'gt_labels': true_labels,
