@@ -8,13 +8,23 @@ from loss import CIoULoss, maximum
 
 
 class YOLO(keras.Model):
-    def __init__(self, num_classes=20, depth=1.0, width=1.0, ratio=1.0, *args, **kwargs):
+    def __init__(
+            self,
+            num_classes=20,
+            depth=1.0,
+            width=1.0,
+            ratio=1.0,
+            conf_threshold=0.2,
+            iou_threshold=0.7,
+            *args,
+            **kwargs
+    ):
         super(YOLO, self).__init__(*args, **kwargs)
         self.num_classes = num_classes
         self.feature_extractor = FeatureExtractor(depth, width, ratio)
         self.fpn = FPN(depth, width, ratio)
         self.detection_head = DetectionHead(num_classes, width)
-        self.prediction_decoder = PredictionDecoder()
+        self.prediction_decoder = PredictionDecoder(conf_threshold=conf_threshold, iou_threshold=iou_threshold)
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.box_loss = CIoULoss(reduction="sum")
         self.distance_loss = keras.losses.MeanSquaredError(reduction="sum")
