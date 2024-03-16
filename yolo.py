@@ -10,6 +10,7 @@ from loss import CIoULoss, maximum
 class YOLO(keras.Model):
     def __init__(
             self,
+            target_dist,
             num_classes=20,
             depth=1.0,
             width=1.0,
@@ -27,20 +28,22 @@ class YOLO(keras.Model):
         self.prediction_decoder = PredictionDecoder(conf_threshold=conf_threshold, iou_threshold=iou_threshold)
         self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.box_loss = CIoULoss(reduction="sum")
-        self.distance_loss = keras.losses.MeanSquaredError(reduction="sum")
+        self.distance_loss = keras.losses.BinaryCrossentropy(reduction="sum")
         self.label_encoder = LabelEncoder(num_classes=num_classes)
-        self.box_loss_weight = 7.5
-        self.classification_loss_weight = 1.5
-        self.distance_loss_weight = 1.0
+        self.box_loss_weight = None
+        self.classification_loss_weight = None
+        self.distance_loss_weight = None
+        self.max_dist = tf.reduce_max(target_dist)
         self.build((None, 640, 640, 3))
 
     def compile(
         self,
-        box_loss_weight=7.5,
-        classification_loss_weight=1.5,
-        distance_loss_weight=1.0,
+        box_loss_weight=4.5,
+        classification_loss_weight=0.45,
+        distance_loss_weight=0.05,
         **kwargs,
     ):
+
         self.box_loss_weight = box_loss_weight
         self.classification_loss_weight = classification_loss_weight
         self.distance_loss_weight = distance_loss_weight
@@ -106,6 +109,8 @@ class YOLO(keras.Model):
             axis=-1,
         )
 
+        target_dist /= self.max_dist
+
         y_true = {
             "box": target_boxes * fg_mask[..., None],
             "class": target_scores,
@@ -129,4 +134,4 @@ class YOLO(keras.Model):
     def predict_step(self, *args):
         outputs = super(YOLO, self).predict_step(*args)
 
-        return self.prediction_decoder({'preds': outputs, 'images': args[-1]})
+        return self.prediction_decoder({'preds': outputs, 'images': args[-1], 'max_dist': self.max_dist})

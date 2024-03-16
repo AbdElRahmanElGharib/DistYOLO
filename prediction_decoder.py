@@ -62,6 +62,8 @@ class PredictionDecoder(keras.Model):
     def call(self, inputs, training=None, mask=None):
         preds, images = inputs['preds'], inputs['images']
 
+        max_dist = inputs['max_dist']
+
         boxes = preds['boxes']
         scores = preds['classes']
         distances = preds['distances']
@@ -74,4 +76,8 @@ class PredictionDecoder(keras.Model):
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
         box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
 
-        return self.nms({'boxes': box_preds, 'classes': scores, 'distances': distances})
+        bounding_boxes = self.nms({'boxes': box_preds, 'classes': scores, 'distances': distances})
+
+        bounding_boxes['distances'] *= max_dist
+
+        return bounding_boxes
