@@ -93,6 +93,12 @@ class YOLO(keras.Model):
             }
         )
 
+        pred_dist = tf.where(
+            target_dist == -1.,
+            -1.,
+            pred_dist
+        )
+
         target_boxes /= stride_tensor
         target_scores_sum = maximum(tf.math.reduce_sum(target_scores), 1)
         box_weight = tf.expand_dims(
