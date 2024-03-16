@@ -16,6 +16,8 @@ class YOLO(keras.Model):
             ratio=1.0,
             conf_threshold=0.2,
             iou_threshold=0.7,
+            focal_loss_alpha=0.25,
+            focal_loss_gamma=2.0,
             *args,
             **kwargs
     ):
@@ -25,7 +27,12 @@ class YOLO(keras.Model):
         self.fpn = FPN(depth, width, ratio)
         self.detection_head = DetectionHead(num_classes, width)
         self.prediction_decoder = PredictionDecoder(conf_threshold=conf_threshold, iou_threshold=iou_threshold)
-        self.classification_loss = keras.losses.BinaryCrossentropy(reduction="sum")
+        self.classification_loss = keras.losses.BinaryFocalCrossentropy(
+            apply_class_balancing=True,
+            alpha=focal_loss_alpha,
+            gamma=focal_loss_gamma,
+            reduction="sum"
+        )
         self.box_loss = CIoULoss(reduction="sum")
         self.distance_loss = keras.losses.MeanSquaredError(reduction="sum")
         self.label_encoder = LabelEncoder(num_classes=num_classes)
