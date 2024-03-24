@@ -5,6 +5,7 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
+from augment import RandomFlip
 
 
 class YOLO(keras.Model):
@@ -26,7 +27,10 @@ class YOLO(keras.Model):
         self.feature_extractor = FeatureExtractor(depth, width, ratio)
         self.fpn = FPN(depth, width, ratio)
         self.detection_head = DetectionHead(num_classes, width)
-        self.prediction_decoder = PredictionDecoder(conf_threshold=conf_threshold, iou_threshold=iou_threshold)
+        self.prediction_decoder = PredictionDecoder(
+            conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold
+        )
         self.classification_loss = keras.losses.BinaryFocalCrossentropy(
             apply_class_balancing=True,
             alpha=focal_loss_alpha,
@@ -39,6 +43,11 @@ class YOLO(keras.Model):
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 1.5
         self.distance_loss_weight = 1.0
+        self.augmenter = keras.Sequential(
+            layers=[
+                RandomFlip()
+            ]
+        )
         self.build((None, 640, 640, 3))
 
     def compile(
@@ -131,3 +140,28 @@ class YOLO(keras.Model):
         outputs = super(YOLO, self).predict_step(*args)
 
         return self.prediction_decoder({'preds': outputs, 'images': args[-1]})
+
+    def train_step(self, data):
+        if not isinstance(data, tuple):
+            data = tuple(data)
+
+        images, bounding_boxes = data[0], data[1]
+        sample_weight = None
+
+        if len(data) == 3:
+            sample_weight = data[2]
+
+        augmented = self.augmenter(
+            {
+                'images': images,
+                'bounding_boxes': bounding_boxes
+            }
+        )
+
+        return super(YOLO, self).train_step(
+            (
+                augmented['images'],
+                augmented['bounding_boxes'],
+                sample_weight
+            )
+        )
