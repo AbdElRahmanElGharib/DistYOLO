@@ -43,11 +43,7 @@ class YOLO(keras.Model):
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 1.5
         self.distance_loss_weight = 1.0
-        self.augmenter = keras.Sequential(
-            layers=[
-                RandomFlip()
-            ]
-        )
+        self.augmenter = RandomFlip()
         self.build((None, 640, 640, 3))
 
     def compile(

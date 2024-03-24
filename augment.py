@@ -60,8 +60,8 @@ class RandomFlip(keras.layers.Layer):
                     images
                 )
 
-                boxes *= tf.constant([[[-1, 1, -1, 1]]])
-                boxes += tf.constant([[[640, 0, 640, 0]]])
+                boxes *= tf.constant([[[-1, 1, -1, 1]]], dtype=boxes.dtype)
+                boxes += tf.constant([[[640, 0, 640, 0]]], dtype=boxes.dtype)
                 boxes = tf.concat(
                     [
                         tf.expand_dims(boxes[..., 2], axis=-1),
@@ -78,8 +78,8 @@ class RandomFlip(keras.layers.Layer):
                     images
                 )
 
-                boxes *= tf.constant([[[1, -1, 1, -1]]])
-                boxes += tf.constant([[[0, 640, 0, 640]]])
+                boxes *= tf.constant([[[1, -1, 1, -1]]], dtype=boxes.dtype)
+                boxes += tf.constant([[[0, 640, 0, 640]]], dtype=boxes.dtype)
                 boxes = tf.concat(
                     [
                         tf.expand_dims(boxes[..., 0], axis=-1),
@@ -98,3 +98,6 @@ class RandomFlip(keras.layers.Layer):
                 'classes': inputs['bounding_boxes']['classes']
             }
         }
+
+    def count_params(self):
+        return 0
