@@ -1,6 +1,7 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
+from label_encoder import convert_bounding_box_to_dense
 
 
 HORIZONTAL = "horizontal"
@@ -38,29 +39,55 @@ class RandomFlip(keras.layers.Layer):
 
     def call(self, inputs, *args, **kwargs):
         images = inputs['images']
-        boxes = inputs['bounding_boxes']['boxes']
+        bounding_boxes = inputs['bounding_boxes']
+
+        bounding_boxes = convert_bounding_box_to_dense(bounding_boxes)
+
+        if isinstance(images, tf.RaggedTensor):
+            images = images.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+
+        boxes = bounding_boxes['boxes']
 
         prop = tf.random.uniform([])
         if prop <= self.rate:
 
             if self.horizontal:
-                images = tf.image.flip_left_right(images)
-                boxes = tf.map_fn(
-                    lambda x: tf.map_fn(
-                        lambda y: tf.constant([640 - y[0], y[1], 640 - y[2], y[3]]),
-                        x
-                    ),
-                    boxes
+                images = tf.map_fn(
+                    tf.image.flip_left_right,
+                    images
+                )
+
+                boxes *= tf.constant([[[-1, 1, -1, 1]]])
+                boxes += tf.constant([[[640, 0, 640, 0]]])
+                boxes = tf.concat(
+                    [
+                        tf.expand_dims(boxes[..., 2], axis=-1),
+                        tf.expand_dims(boxes[..., 1], axis=-1),
+                        tf.expand_dims(boxes[..., 0], axis=-1),
+                        tf.expand_dims(boxes[..., 3], axis=-1)
+                    ],
+                    axis=-1
                 )
 
             if self.vertical:
-                images = tf.image.flip_up_down(images)
-                boxes = tf.map_fn(
-                    lambda x: tf.map_fn(
-                        lambda y: tf.constant([y[0], 640 - y[1], y[2], 640 - y[3]]),
-                        x
-                    ),
-                    boxes
+                images = tf.map_fn(
+                    tf.image.flip_up_down,
+                    images
+                )
+
+                boxes *= tf.constant([[[1, -1, 1, -1]]])
+                boxes += tf.constant([[[0, 640, 0, 640]]])
+                boxes = tf.concat(
+                    [
+                        tf.expand_dims(boxes[..., 0], axis=-1),
+                        tf.expand_dims(boxes[..., 3], axis=-1),
+                        tf.expand_dims(boxes[..., 2], axis=-1),
+                        tf.expand_dims(boxes[..., 1], axis=-1)
+                    ],
+                    axis=-1
                 )
 
         return {
