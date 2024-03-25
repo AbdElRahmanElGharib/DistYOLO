@@ -161,8 +161,10 @@ class YOLO(keras.Model):
                 'bounding_boxes': bounding_boxes
         }
 
-        for augmenter in self.augmenters:
-            augmented = augmenter(augmented)
+        # for augmenter in self.augmenters:
+        #     augmented = augmenter(augmented)
+        # TODO: fix augmentation strategies
+        augmented = self.augmenters[0](augmented)
 
         return super(YOLO, self).train_step(
             (
