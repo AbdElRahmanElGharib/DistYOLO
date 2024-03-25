@@ -180,8 +180,7 @@ class RandomBrightness(keras.layers.Layer):
             delta = tf.random.uniform(
                 shape=[],
                 minval=-self.limit,
-                maxval=self.limit,
-                dtype=images.dtype
+                maxval=self.limit
             )
             images = tf.image.adjust_brightness(images, delta)
 
@@ -225,8 +224,7 @@ class RandomHue(keras.layers.Layer):
             delta = tf.random.uniform(
                 shape=[],
                 minval=-self.limit,
-                maxval=self.limit,
-                dtype=images.dtype
+                maxval=self.limit
             )
             images = tf.image.adjust_hue(images, delta)
 
@@ -270,8 +268,7 @@ class RandomSaturation(keras.layers.Layer):
             delta = tf.random.uniform(
                 shape=[],
                 minval=1.0-self.limit,
-                maxval=1.0+self.limit,
-                dtype=images.dtype
+                maxval=1.0+self.limit
             )
             images = tf.image.adjust_saturation(images, delta)
 
@@ -315,8 +312,7 @@ class RandomContrast(keras.layers.Layer):
             delta = tf.random.uniform(
                 shape=[],
                 minval=1.0-self.limit,
-                maxval=1.0+self.limit,
-                dtype=images.dtype
+                maxval=1.0+self.limit
             )
             images = tf.image.adjust_contrast(images, delta)
 
@@ -332,6 +328,7 @@ class RandomContrast(keras.layers.Layer):
 class RandomGamma(keras.layers.Layer):
     def __init__(self, rate=0.5, limit=0.5, **kwargs):
         self.rate = rate
+        self.limit = limit
 
         if rate < 0.0 or rate > 1.0:
             raise ValueError(
@@ -359,8 +356,7 @@ class RandomGamma(keras.layers.Layer):
             gamma = tf.random.uniform(
                 shape=[],
                 minval=self.limit,
-                maxval=1.0/self.limit,
-                dtype=images.dtype
+                maxval=1.0/self.limit
             )
             images = tf.image.adjust_gamma(images, gamma)
 
@@ -405,9 +401,12 @@ class RandomJPEGQuality(keras.layers.Layer):
                 shape=[],
                 minval=self.limit,
                 maxval=100,
-                dtype=images.dtype
+                dtype=tf.int32
             )
-            images = tf.image.adjust_jpeg_quality(images, quality)
+            images = tf.map_fn(
+                lambda image: tf.image.adjust_jpeg_quality(image, quality),
+                images
+            )
 
         return {
             'images': images,
