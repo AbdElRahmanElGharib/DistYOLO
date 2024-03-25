@@ -5,7 +5,8 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
-from augment import RandomFlip
+from augment import RandomFlip, RandomHue, RandomSaturation, \
+    RandomBrightness, RandomContrast, RandomGamma, RandomJPEGQuality
 
 
 class YOLO(keras.Model):
@@ -43,7 +44,15 @@ class YOLO(keras.Model):
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 1.5
         self.distance_loss_weight = 1.0
-        self.augmenter = RandomFlip()
+        self.augmenters = [
+            RandomFlip(),
+            RandomHue(),
+            RandomSaturation(),
+            RandomBrightness(),
+            RandomContrast(),
+            RandomGamma(),
+            RandomJPEGQuality(),
+        ]
         self.build((None, 640, 640, 3))
 
     def compile(
@@ -147,12 +156,13 @@ class YOLO(keras.Model):
         if len(data) == 3:
             sample_weight = data[2]
 
-        augmented = self.augmenter(
-            {
+        augmented = {
                 'images': images,
                 'bounding_boxes': bounding_boxes
-            }
-        )
+        }
+
+        for augmenter in self.augmenters:
+            augmented = augmenter(augmented)
 
         return super(YOLO, self).train_step(
             (
