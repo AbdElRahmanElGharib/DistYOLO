@@ -282,3 +282,48 @@ class RandomSaturation(keras.layers.Layer):
 
     def count_params(self):
         return 0
+
+
+class RandomContrast(keras.layers.Layer):
+    def __init__(self, rate=0.5, limit=0.2, **kwargs):
+        self.rate = rate
+        self.limit = limit
+
+        if rate < 0.0 or rate > 1.0:
+            raise ValueError(
+                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
+            )
+
+        if limit < 0.0 or limit > 1.0:
+            raise ValueError(
+                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
+            )
+
+        super(RandomContrast, self).__init__(**kwargs)
+
+    def call(self, inputs, *args, **kwargs):
+        images = inputs['images']
+
+        if isinstance(images, tf.RaggedTensor):
+            images = images.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+
+        prop = tf.random.uniform([])
+        if prop <= self.rate:
+            delta = tf.random.uniform(
+                shape=[],
+                minval=1.0-self.limit,
+                maxval=1.0+self.limit,
+                dtype=images.dtype
+            )
+            images = tf.image.adjust_contrast(images, delta)
+
+        return {
+            'images': images,
+            'bounding_boxes': inputs['bounding_boxes']
+        }
+
+    def count_params(self):
+        return 0
