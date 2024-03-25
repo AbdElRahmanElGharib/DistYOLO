@@ -400,7 +400,7 @@ class RandomJPEGQuality(keras.layers.Layer):
             quality = tf.random.uniform(
                 shape=[],
                 minval=self.limit,
-                maxval=100,
+                maxval=101,
                 dtype=tf.int32
             )
             images = tf.map_fn(

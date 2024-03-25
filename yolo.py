@@ -5,7 +5,7 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
-from augment import RandomFlip, RandomHue, RandomSaturation, \
+from augment import RandomFlip, ChannelShuffle, RandomHue, RandomSaturation, \
     RandomBrightness, RandomContrast, RandomGamma, RandomJPEGQuality
 
 
@@ -46,6 +46,7 @@ class YOLO(keras.Model):
         self.distance_loss_weight = 1.0
         self.augmenters = [
             RandomFlip(),
+            ChannelShuffle(),
             RandomHue(),
             RandomSaturation(),
             RandomBrightness(),
