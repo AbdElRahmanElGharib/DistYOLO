@@ -371,3 +371,48 @@ class RandomGamma(keras.layers.Layer):
 
     def count_params(self):
         return 0
+
+
+class RandomJPEGQuality(keras.layers.Layer):
+    def __init__(self, rate=0.5, limit=0.5, **kwargs):
+        self.rate = rate
+        self.limit = int(limit*100)
+
+        if rate < 0.0 or rate > 1.0:
+            raise ValueError(
+                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
+            )
+
+        if limit < 0.0 or limit > 1.0:
+            raise ValueError(
+                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
+            )
+
+        super(RandomJPEGQuality, self).__init__(**kwargs)
+
+    def call(self, inputs, *args, **kwargs):
+        images = inputs['images']
+
+        if isinstance(images, tf.RaggedTensor):
+            images = images.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+
+        prop = tf.random.uniform([])
+        if prop <= self.rate:
+            quality = tf.random.uniform(
+                shape=[],
+                minval=self.limit,
+                maxval=100,
+                dtype=images.dtype
+            )
+            images = tf.image.adjust_jpeg_quality(images, quality)
+
+        return {
+            'images': images,
+            'bounding_boxes': inputs['bounding_boxes']
+        }
+
+    def count_params(self):
+        return 0
