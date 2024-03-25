@@ -35,6 +35,11 @@ class RandomFlip(keras.layers.Layer):
                 "{arg}".format(name=self.name, arg=mode)
             )
 
+        if rate < 0.0 or rate > 1.0:
+            raise ValueError(
+                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
+            )
+
         super(RandomFlip, self).__init__(**kwargs)
 
     def call(self, inputs, *args, **kwargs):
@@ -97,6 +102,47 @@ class RandomFlip(keras.layers.Layer):
                 'distances': inputs['bounding_boxes']['distances'],
                 'classes': inputs['bounding_boxes']['classes']
             }
+        }
+
+    def count_params(self):
+        return 0
+
+
+class ChannelShuffle(keras.layers.Layer):
+    def __init__(self, rate=0.5, **kwargs):
+        self.rate = rate
+
+        if rate < 0.0 or rate > 1.0:
+            raise ValueError(
+                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
+            )
+
+        super(ChannelShuffle, self).__init__(**kwargs)
+
+    def call(self, inputs, *args, **kwargs):
+        images = inputs['images']
+
+        if isinstance(images, tf.RaggedTensor):
+            images = images.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+
+        prop = tf.random.uniform([])
+        if prop <= self.rate:
+            indices = tf.random.shuffle(tf.constant([0, 1, 2]))
+            images = tf.concat(
+                [
+                    tf.expand_dims(images[..., indices[0]], axis=-1),
+                    tf.expand_dims(images[..., indices[1]], axis=-1),
+                    tf.expand_dims(images[..., indices[2]], axis=-1),
+                ],
+                axis=-1
+            )
+
+        return {
+            'images': images,
+            'bounding_boxes': inputs['bounding_boxes']
         }
 
     def count_params(self):
