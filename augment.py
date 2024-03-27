@@ -149,54 +149,11 @@ class ChannelShuffle(keras.layers.Layer):
         return 0
 
 
-class RandomBrightness(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.2, **kwargs):
-        self.rate = rate
-        self.limit = limit
-
-        if rate < 0.0 or rate > 1.0:
-            raise ValueError(
-                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
-            )
-
-        if limit < 0.0 or limit > 1.0:
-            raise ValueError(
-                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
-            )
-
-        super(RandomBrightness, self).__init__(**kwargs)
-
-    def call(self, inputs, *args, **kwargs):
-        images = inputs['images']
-
-        if isinstance(images, tf.RaggedTensor):
-            images = images.to_tensor(
-                default_value=-1,
-                shape=None
-            )
-
-        prop = tf.random.uniform([])
-        if prop <= self.rate:
-            delta = tf.random.uniform(
-                shape=[],
-                minval=-self.limit,
-                maxval=self.limit
-            )
-            images = tf.image.adjust_brightness(images, delta)
-
-        return {
-            'images': images,
-            'bounding_boxes': inputs['bounding_boxes']
-        }
-
-    def count_params(self):
-        return 0
-
-
 class RandomHue(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.1, **kwargs):
+    def __init__(self, rate=0.5, limit=0.5, deterministic=False, **kwargs):
         self.rate = rate
         self.limit = limit
+        self.deterministic = deterministic
 
         if rate < 0.0 or rate > 1.0:
             raise ValueError(
@@ -226,6 +183,8 @@ class RandomHue(keras.layers.Layer):
                 minval=-self.limit,
                 maxval=self.limit
             )
+            if self.deterministic:
+                delta = self.limit
             images = tf.image.adjust_hue(images, delta)
 
         return {
@@ -238,18 +197,19 @@ class RandomHue(keras.layers.Layer):
 
 
 class RandomSaturation(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.1, **kwargs):
+    def __init__(self, rate=0.5, limit=2.0, deterministic=False, **kwargs):
         self.rate = rate
         self.limit = limit
+        self.deterministic = deterministic
 
         if rate < 0.0 or rate > 1.0:
             raise ValueError(
                 f"`rate` should be inside of range [0, 1]. Got rate={rate}"
             )
 
-        if limit < 0.0 or limit > 1.0:
+        if limit < 1.0:
             raise ValueError(
-                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
+                f"`limit` should be inside of range [1, inf]. Got limit={limit}"
             )
 
         super(RandomSaturation, self).__init__(**kwargs)
@@ -267,146 +227,12 @@ class RandomSaturation(keras.layers.Layer):
         if prop <= self.rate:
             delta = tf.random.uniform(
                 shape=[],
-                minval=1.0-self.limit,
-                maxval=1.0+self.limit
+                minval=1.0/self.limit,
+                maxval=self.limit
             )
+            if self.deterministic:
+                delta = self.limit
             images = tf.image.adjust_saturation(images, delta)
-
-        return {
-            'images': images,
-            'bounding_boxes': inputs['bounding_boxes']
-        }
-
-    def count_params(self):
-        return 0
-
-
-class RandomContrast(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.2, **kwargs):
-        self.rate = rate
-        self.limit = limit
-
-        if rate < 0.0 or rate > 1.0:
-            raise ValueError(
-                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
-            )
-
-        if limit < 0.0 or limit > 1.0:
-            raise ValueError(
-                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
-            )
-
-        super(RandomContrast, self).__init__(**kwargs)
-
-    def call(self, inputs, *args, **kwargs):
-        images = inputs['images']
-
-        if isinstance(images, tf.RaggedTensor):
-            images = images.to_tensor(
-                default_value=-1,
-                shape=None
-            )
-
-        prop = tf.random.uniform([])
-        if prop <= self.rate:
-            delta = tf.random.uniform(
-                shape=[],
-                minval=1.0-self.limit,
-                maxval=1.0+self.limit
-            )
-            images = tf.image.adjust_contrast(images, delta)
-
-        return {
-            'images': images,
-            'bounding_boxes': inputs['bounding_boxes']
-        }
-
-    def count_params(self):
-        return 0
-
-
-class RandomGamma(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.5, **kwargs):
-        self.rate = rate
-        self.limit = limit
-
-        if rate < 0.0 or rate > 1.0:
-            raise ValueError(
-                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
-            )
-
-        if limit < 0.0 or limit > 1.0:
-            raise ValueError(
-                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
-            )
-
-        super(RandomGamma, self).__init__(**kwargs)
-
-    def call(self, inputs, *args, **kwargs):
-        images = inputs['images']
-
-        if isinstance(images, tf.RaggedTensor):
-            images = images.to_tensor(
-                default_value=-1,
-                shape=None
-            )
-
-        prop = tf.random.uniform([])
-        if prop <= self.rate:
-            gamma = tf.random.uniform(
-                shape=[],
-                minval=self.limit,
-                maxval=1.0/self.limit
-            )
-            images = tf.image.adjust_gamma(images, gamma)
-
-        return {
-            'images': images,
-            'bounding_boxes': inputs['bounding_boxes']
-        }
-
-    def count_params(self):
-        return 0
-
-
-class RandomJPEGQuality(keras.layers.Layer):
-    def __init__(self, rate=0.5, limit=0.5, **kwargs):
-        self.rate = rate
-        self.limit = int(limit*100)
-
-        if rate < 0.0 or rate > 1.0:
-            raise ValueError(
-                f"`rate` should be inside of range [0, 1]. Got rate={rate}"
-            )
-
-        if limit < 0.0 or limit > 1.0:
-            raise ValueError(
-                f"`limit` should be inside of range [0, 1]. Got limit={limit}"
-            )
-
-        super(RandomJPEGQuality, self).__init__(**kwargs)
-
-    def call(self, inputs, *args, **kwargs):
-        images = inputs['images']
-
-        if isinstance(images, tf.RaggedTensor):
-            images = images.to_tensor(
-                default_value=-1,
-                shape=None
-            )
-
-        prop = tf.random.uniform([])
-        if prop <= self.rate:
-            quality = tf.random.uniform(
-                shape=[],
-                minval=self.limit,
-                maxval=101,
-                dtype=tf.int32
-            )
-            images = tf.map_fn(
-                lambda image: tf.image.adjust_jpeg_quality(image, quality),
-                images
-            )
 
         return {
             'images': images,
