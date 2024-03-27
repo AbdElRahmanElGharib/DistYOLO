@@ -5,8 +5,7 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
-from augment import RandomFlip, ChannelShuffle, RandomHue, RandomSaturation, \
-    RandomBrightness, RandomContrast, RandomGamma, RandomJPEGQuality
+from augment import RandomFlip, ChannelShuffle, RandomHue, RandomSaturation
 
 
 class YOLO(keras.Model):
@@ -49,10 +48,6 @@ class YOLO(keras.Model):
             ChannelShuffle(),
             RandomHue(),
             RandomSaturation(),
-            RandomBrightness(),
-            RandomContrast(),
-            RandomGamma(),
-            RandomJPEGQuality(),
         ]
         self.build((None, 640, 640, 3))
 
@@ -162,10 +157,8 @@ class YOLO(keras.Model):
                 'bounding_boxes': bounding_boxes
         }
 
-        # for augmenter in self.augmenters:
-        #     augmented = augmenter(augmented)
-        # TODO: fix augmentation strategies
-        augmented = self.augmenters[0](augmented)
+        for augmenter in self.augmenters:
+            augmented = augmenter(augmented)
 
         return super(YOLO, self).train_step(
             (
