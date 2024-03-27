@@ -92,10 +92,6 @@ Parts of this code are derived from KerasCV with some modifications to comply wi
 >
 >}
 
-## Contact
-
-For questions, comments, or support, please use the comments section of the repository.
-
 ## Additional Information
 
 Please note that this project is still under active development. Use with CAUTION!
