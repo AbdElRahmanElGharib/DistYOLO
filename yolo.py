@@ -5,13 +5,13 @@ from model import FeatureExtractor, FPN, DetectionHead
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
 from loss import CIoULoss, maximum
-from augment import RandomFlip, ChannelShuffle, RandomHue, RandomSaturation
+from augment import RandomFlip, ChannelShuffle, RandomHue, RandomSaturation, RandomBrightness
 
 
 class YOLO(keras.Model):
     def __init__(
             self,
-            num_classes=20,
+            num_classes,
             depth=1.0,
             width=1.0,
             ratio=1.0,
@@ -19,6 +19,7 @@ class YOLO(keras.Model):
             iou_threshold=0.7,
             focal_loss_alpha=0.25,
             focal_loss_gamma=2.0,
+            train_aug=True,
             *args,
             **kwargs
     ):
@@ -48,7 +49,9 @@ class YOLO(keras.Model):
             ChannelShuffle(),
             RandomHue(),
             RandomSaturation(),
+            RandomBrightness(),
         ]
+        self.train_aug = train_aug
         self.build((None, 640, 640, 3))
 
     def compile(
@@ -157,8 +160,9 @@ class YOLO(keras.Model):
                 'bounding_boxes': bounding_boxes
         }
 
-        for augmenter in self.augmenters:
-            augmented = augmenter(augmented)
+        if self.train_aug:
+            for augmenter in self.augmenters:
+                augmented = augmenter(augmented)
 
         return super(YOLO, self).train_step(
             (
