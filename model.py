@@ -1,20 +1,20 @@
 import tensorflow as tf
 import keras
 # import tensorflow.keras as keras
-from keras.utils import get_custom_objects
+# from keras.utils import get_custom_objects
 
 
-def ranged_leaky_relu(features, alpha=0.1, end=150.0):
+# def ranged_leaky_relu(features, alpha=0.1, end=150.0):
 
-    mask = tf.cast(features < 0.0, features.dtype)
+#     mask = tf.cast(features < 0.0, features.dtype)
 
-    outputs = tf.where(mask == 0.0, features, features * alpha)
+#     outputs = tf.where(mask == 0.0, features, features * alpha)
 
-    mask = tf.cast(features > end, features.dtype)
+#     mask = tf.cast(features > end, features.dtype)
 
-    outputs = tf.where(mask == 0.0, outputs, outputs * alpha + end * (1-alpha))
+#     outputs = tf.where(mask == 0.0, outputs, outputs * alpha + end * (1-alpha))
 
-    return outputs
+#     return outputs
 
 
 class Conv(keras.Model):
@@ -190,7 +190,7 @@ class FPN(keras.Model):
 
 class DetectionHead(keras.Model):
     def __init__(self, num_classes: int = 80, width=1.0, *args, **kwargs):
-        get_custom_objects().update({'ranged_leaky_relu': keras.layers.Activation(ranged_leaky_relu)})
+        # get_custom_objects().update({'ranged_leaky_relu': keras.layers.Activation(ranged_leaky_relu)})
         super(DetectionHead, self).__init__(*args, **kwargs)
         self.boxes1 = keras.Sequential(layers=[
             Conv(int(256 * width), 3, 1, 1),
@@ -207,7 +207,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=ranged_leaky_relu)
+            keras.layers.Activation(activation='leaky_relu')
         ])
         self.concat1 = keras.layers.Concatenate(axis=-1)
         self.reshape1 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
@@ -226,7 +226,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=ranged_leaky_relu)
+            keras.layers.Activation(activation='leaky_relu')
         ])
         self.concat2 = keras.layers.Concatenate(axis=-1)
         self.reshape2 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
@@ -245,7 +245,7 @@ class DetectionHead(keras.Model):
             Conv(int(256 * width), 3, 1, 1),
             Conv(int(256 * width), 3, 1, 1),
             keras.layers.Conv2D(filters=1, kernel_size=1, strides=1),
-            keras.layers.Activation(activation=ranged_leaky_relu)
+            keras.layers.Activation(activation='leaky_relu')
         ])
         self.concat3 = keras.layers.Concatenate(axis=-1)
         self.reshape3 = keras.layers.Reshape(target_shape=(-1, num_classes + 65))
