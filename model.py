@@ -271,11 +271,7 @@ class DetectionHead(keras.Model):
         x3 = self.reshape3(x3)
         x = self.concat_out([x1, x2, x3])
         x = self.act_out(x)
-        return {
-            'boxes': x[..., :64],
-            'classes': x[..., 64:-1],
-            'distances': tf.expand_dims(x[..., -1], axis=-1)
-        }
+        return x
 
 
 # TODO: implement SegmentationHead

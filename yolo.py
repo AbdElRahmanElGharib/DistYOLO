@@ -81,6 +81,12 @@ class YOLO(keras.Model):
         return x
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
+        reformat = lambda x: {
+            'boxes': x[..., :64],
+            'classes': x[..., 64:-1],
+            'distances': tf.expand_dims(x[..., -1], axis=-1)
+        }
+        y_pred = reformat(y_pred)
         pred_boxes = y_pred['boxes']
         pred_scores = y_pred['classes']
         pred_dist = y_pred['distances']
@@ -143,7 +149,13 @@ class YOLO(keras.Model):
     def predict_step(self, *args):
         outputs = super(YOLO, self).predict_step(*args)
 
-        return self.prediction_decoder({'preds': outputs, 'images': args[-1]})
+        reformat = lambda x: {
+            'boxes': x[..., :64],
+            'classes': x[..., 64:-1],
+            'distances': tf.expand_dims(x[..., -1], axis=-1)
+        }
+
+        return self.prediction_decoder({'preds': reformat(outputs), 'images': args[-1]})
 
     def train_step(self, data):
         if not isinstance(data, tuple):
