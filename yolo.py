@@ -55,11 +55,11 @@ class YOLO(keras.Model):
         self.build((None, 640, 640, 3))
 
     def compile(
-        self,
-        box_loss_weight=7.5,
-        classification_loss_weight=1.5,
-        distance_loss_weight=1.0,
-        **kwargs,
+            self,
+            box_loss_weight=7.5,
+            classification_loss_weight=1.5,
+            distance_loss_weight=1.0,
+            **kwargs,
     ):
         self.box_loss_weight = box_loss_weight
         self.classification_loss_weight = classification_loss_weight
@@ -81,11 +81,13 @@ class YOLO(keras.Model):
         return x
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
-        reformat = lambda x: {
-            'boxes': x[..., :64],
-            'classes': x[..., 64:-1],
-            'distances': tf.expand_dims(x[..., -1], axis=-1)
-        }
+        def reformat(x_in):
+            return {
+                'boxes': x_in[..., :64],
+                'classes': x_in[..., 64:-1],
+                'distances': tf.expand_dims(x_in[..., -1], axis=-1)
+            }
+
         y_pred = reformat(y_pred)
         pred_boxes = y_pred['boxes']
         pred_scores = y_pred['classes']
@@ -149,11 +151,12 @@ class YOLO(keras.Model):
     def predict_step(self, *args):
         outputs = super(YOLO, self).predict_step(*args)
 
-        reformat = lambda x: {
-            'boxes': x[..., :64],
-            'classes': x[..., 64:-1],
-            'distances': tf.expand_dims(x[..., -1], axis=-1)
-        }
+        def reformat(x_in):
+            return {
+                'boxes': x_in[..., :64],
+                'classes': x_in[..., 64:-1],
+                'distances': tf.expand_dims(x_in[..., -1], axis=-1)
+            }
 
         return self.prediction_decoder({'preds': reformat(outputs), 'images': args[-1]})
 
@@ -168,8 +171,8 @@ class YOLO(keras.Model):
             sample_weight = data[2]
 
         augmented = {
-                'images': images,
-                'bounding_boxes': bounding_boxes
+            'images': images,
+            'bounding_boxes': bounding_boxes
         }
 
         if self.train_aug:
