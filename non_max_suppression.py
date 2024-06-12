@@ -53,7 +53,7 @@ class NonMaxSuppression(keras.layers.Layer):
 
         bounding_boxes = {
             "boxes": box_prediction,
-            "confidence": confidence_prediction,
+            "confidences": confidence_prediction,
             "classes": tf.argmax(class_prediction, axis=-1),
             "distances": dist_prediction,
             "num_detections": valid_det,
