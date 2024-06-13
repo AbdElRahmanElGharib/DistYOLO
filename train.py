@@ -1,22 +1,33 @@
-import tensorflow as tf
-import tensorflow.keras as keras
-import time
+from time import time as t
+from tensorflow import function as tf_function_decorator
+from tensorflow import GradientTape
 from tensorflow.keras import Model
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
 
 
 def train(
-        model: Model = None,
+        model=None,
         train_ds=None,
         val_ds=None,
-        epochs: int = 0,
-        batch_size: int = 0,
+        epochs: int = 1,
+        batch_size: int = 1,
         saved_path: str = ''
 ):
+    if model is not Model:
+        raise ValueError(f'model must be of type keras.Model but got {type(model)}.')
+    if train_ds is None:
+        raise ValueError('train_ds must be passed but got None.')
+
+    if saved_path != '' and saved_path[-1] != '\\':
+        saved_path += '\\'
+
     # Instantiate an optimizer.
-    optimizer = keras.optimizers.SGD(learning_rate=1e-3)  # TODO: change optimizer
+    optimizer = SGD(learning_rate=1e-3)  # TODO: change optimizer
 
     # Instantiate a loss function.
-    loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)  # TODO: change loss function
+    loss_fn = SparseCategoricalCrossentropy(from_logits=True)  # TODO: change loss function
 
     # Prepare the training dataset.
     train_ds = train_ds.shuffle(buffer_size=1024).batch(batch_size)
@@ -26,15 +37,15 @@ def train(
         val_ds = val_ds.batch(batch_size)
 
     # Prepare the metrics.
-    train_metric = keras.metrics.SparseCategoricalAccuracy()  # TODO: change training metrics
+    train_metric = SparseCategoricalAccuracy()  # TODO: change training metrics
     if val_ds is not None:
-        val_metric = keras.metrics.SparseCategoricalAccuracy()  # TODO: change validation metrics
+        val_metric = SparseCategoricalAccuracy()  # TODO: change validation metrics
     else:
         val_metric = None
 
-    @tf.function
+    @tf_function_decorator
     def train_step(x, y):
-        with tf.GradientTape() as tape:
+        with GradientTape() as tape:
             preds = model(x, training=True)
             loss_value = loss_fn(y, preds)
         grads = tape.gradient(loss_value, model.trainable_weights)
@@ -42,14 +53,14 @@ def train(
         train_metric.update_state(y, preds)
         return loss_value
 
-    @tf.function
+    @tf_function_decorator
     def test_step(x, y):
         val_preds = model(x, training=False)
         val_metric.update_state(y, val_preds)
 
     for epoch in range(epochs):
         print(f"\nStart of epoch {epoch}")
-        start_time = time.time()
+        start_time = t()
 
         # Iterate over the batches of the dataset.
         for step, (x_batch_train, y_batch_train) in enumerate(train_ds):
@@ -76,6 +87,6 @@ def train(
             val_metric.reset_states()
             print(f"Validation acc: {round(float(val_acc), 4)}")
 
-        print(f"Time taken: {round(time.time() - start_time, 2)}s")
+        print(f"Time taken: {round(t() - start_time, 2)}s")
 
         model.save(saved_path+'model.h5')
