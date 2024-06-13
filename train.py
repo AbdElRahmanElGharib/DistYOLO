@@ -2,7 +2,7 @@ from time import time as t
 from tensorflow import function as tf_function_decorator
 from tensorflow import GradientTape
 from tensorflow.keras import Model
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import Optimizer
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
 from tensorflow.keras.metrics import SparseCategoricalAccuracy
 
@@ -13,18 +13,22 @@ def train(
         val_ds=None,
         epochs: int = 1,
         batch_size: int = 1,
+        optimizer=None,
         saved_path: str = ''
 ):
-    if model is not Model:
-        raise ValueError(f'model must be of type keras.Model but got {type(model)}.')
+    if not issubclass(model.__class__, Model):
+        raise ValueError(f'''model must be of type keras.Model 
+        or a subclass of keras.Model but got {model.__class__}.''')
+
+    if not issubclass(optimizer.__class__, Optimizer):
+        raise ValueError(f'''optimizer must be of type keras.optimizers.Optimizer 
+        or a subclass of keras.optimizers.Optimizer but got {optimizer.__class__}.''')
+
     if train_ds is None:
         raise ValueError('train_ds must be passed but got None.')
 
     if saved_path != '' and saved_path[-1] != '\\':
         saved_path += '\\'
-
-    # Instantiate an optimizer.
-    optimizer = SGD(learning_rate=1e-3)  # TODO: change optimizer
 
     # Instantiate a loss function.
     loss_fn = SparseCategoricalCrossentropy(from_logits=True)  # TODO: change loss function
