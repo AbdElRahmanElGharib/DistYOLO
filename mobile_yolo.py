@@ -105,8 +105,6 @@ class MobileYOLO(Model):
         pred_boxes = detections[..., :64]
         pred_scores = detections[..., 64:]
 
-        training_mode_mask = tf.one_hot(indices=training_mode, depth=3)
-
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 8400, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
@@ -137,24 +135,36 @@ class MobileYOLO(Model):
             tf.math.reduce_sum(target_scores, axis=-1) * fg_mask,
             axis=-1,
         )
+        target_boxes *= fg_mask[..., None]
+        pred_boxes *= fg_mask[..., None]
+
+        boxes_training_mask = tf.broadcast_to(training_mode == 0, pred_boxes.shape)
+        classes_training_mask = tf.broadcast_to(training_mode == 0, pred_scores.shape)
+        distance_training_mask = tf.broadcast_to(training_mode == 1, pred_dist.shape)
+        segmentation_training_mask = tf.broadcast_to(training_mode == 2, pred_mask.shape)
+
+        target_boxes = tf.where(boxes_training_mask, target_boxes, pred_boxes)
+        target_scores = tf.where(classes_training_mask, target_scores, pred_scores)
+        target_dist = tf.where(distance_training_mask, target_dist, pred_dist)
+        true_mask = tf.where(segmentation_training_mask, true_mask, pred_mask)
 
         y_true = {
-            "box": target_boxes * fg_mask[..., None],
+            "box": target_boxes,
             "class": target_scores,
             "distance": target_dist,
             "segmentation": true_mask
         }
         y_pred = {
-            "box": pred_boxes * fg_mask[..., None],
+            "box": pred_boxes,
             "class": pred_scores,
             "distance": pred_dist,
             "segmentation": pred_mask
         }
         sample_weights = {
-            "box": 7.5 * box_weight / target_scores_sum * training_mode_mask[..., 0],
-            "class": 1.0 / target_scores_sum * training_mode_mask[..., 0],
-            "distance": 0.5 / target_scores_sum * training_mode_mask[..., 1],
-            "segmentation": 1.0 * training_mode_mask[..., 2]
+            "box": 7.5 * box_weight / target_scores_sum,
+            "class": 1.0 / target_scores_sum,
+            "distance": 0.5 / target_scores_sum,
+            "segmentation": 1.0
         }
 
         return super(MobileYOLO, self).compute_loss(
