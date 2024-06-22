@@ -11,12 +11,6 @@ from loss import maximum, CIoULoss
 BOX_REGRESSORS = 64
 
 
-def gcd(a, b):
-    if a == 0:
-        return b
-    return gcd(b % a, a)
-
-
 class MobileYOLOv2(Model):
     def __init__(
             self,
@@ -36,7 +30,6 @@ class MobileYOLOv2(Model):
         x = Activation('swish')(x)
 
         def bottleneck(x_in, in_channels, out_channels, expansion_factor, stride, use_se, nl):
-            use_residual = (in_channels == out_channels and stride == 1)
             mid_channels = in_channels * expansion_factor
 
             _x = Conv2D(mid_channels, kernel_size=1, use_bias=False)(x_in)
@@ -55,7 +48,7 @@ class MobileYOLOv2(Model):
             _x = BatchNormalization()(_x)
             _x = Activation('relu' if nl == 'RE' else 'swish')(_x)
 
-            if use_residual:
+            if in_channels == out_channels and stride == 1:
                 _x = Add()([_x, x_in])
 
             return _x
@@ -70,14 +63,14 @@ class MobileYOLOv2(Model):
         x = bottleneck(x2, 48, 48, 3, 1, use_se=True, nl='HS')
         x = bottleneck(x, 48, 96, 6, 2, use_se=True, nl='HS')
 
-        x = Conv2D(256, kernel_size=1, use_bias=False)(x)
+        x = Conv2D(64, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x3 = Activation('swish')(x)
 
         sppf1 = MaxPool2D(5, 1, padding='same')(x3)
         sppf2 = MaxPool2D(9, 1, padding='same')(x3)
         sppf3 = MaxPool2D(13, 1, padding='same')(x3)
-        sppf4 = Conv2D(256, 1)(x3)
+        sppf4 = Conv2D(64, 1)(x3)
 
         sppf = Concatenate()([sppf1, sppf2, sppf3, sppf4])
 
@@ -88,11 +81,11 @@ class MobileYOLOv2(Model):
         x = bottleneck(x, 128, 128, 2, 1, False, 'RE')
         x_mid = bottleneck(x, 128, 128, 1, 1, False, 'RE')
 
-        x = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False)(x_mid)
+        x = Conv2D((num_classes + BOX_REGRESSORS + 1), 1, use_bias=False)(x_mid)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
 
-        out_1 = Reshape((-1, (num_classes + BOX_REGRESSORS)))(x)
+        out_1 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
 
         x = Conv2D(64, 1, use_bias=False)(x_mid)
         x = BatchNormalization()(x)
@@ -108,11 +101,11 @@ class MobileYOLOv2(Model):
         x = bottleneck(x, 64, 64, 2, 1, False, 'RE')
         x_mid = bottleneck(x, 64, 64, 3, 1, False, 'RE')
 
-        x = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False)(x_mid)
+        x = Conv2D((num_classes + BOX_REGRESSORS + 1), 1, use_bias=False)(x_mid)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
 
-        out_2 = Reshape((-1, (num_classes + BOX_REGRESSORS)))(x)
+        out_2 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
 
         x = Conv2D(32, 1, use_bias=False)(x_mid)
         x = BatchNormalization()(x)
@@ -128,43 +121,15 @@ class MobileYOLOv2(Model):
         x = bottleneck(x, 32, 32, 2, 1, False, 'RE')
         x = bottleneck(x, 32, 32, 3, 1, False, 'RE')
 
-        x = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False)(x)
+        x = Conv2D((num_classes + BOX_REGRESSORS + 1), 1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
 
-        out_3 = Reshape((-1, (num_classes + BOX_REGRESSORS)))(x)
+        out_3 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
 
         x_detections = Concatenate(axis=-2)([out_1, out_2, out_3])
 
         detections = Activation('linear', name='detections')(x_detections)
-
-        x3_pre = Conv2D(128, 1)(x3)
-        x3_pre = Reshape((-1, 128))(x3_pre)
-
-        x2_pre = Conv2D(128, 1)(x2)
-        x2_pre = Reshape((-1, 128))(x2_pre)
-
-        x1_pre = Conv2D(128, 1)(x1)
-        x1_pre = Reshape((-1, 128))(x1_pre)
-
-        x_pre = Concatenate(axis=-2)([x3_pre, x2_pre, x1_pre])
-
-        x = Concatenate()([x_detections, x_pre])
-
-        x = Conv1D(128, 1, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('leaky_relu')(x)
-
-        x = Conv1D(64, 1, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('leaky_relu')(x)
-
-        x = Conv1D(64, 1, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('leaky_relu')(x)
-
-        x = Conv1D(1, 1)(x)
-        distances = Activation('linear', name='distances')(x)
 
         def conv(x_in, filters, kernel_size):
             _x = DepthwiseConv2D(kernel_size=kernel_size, padding='same', use_bias=False)(x_in)
@@ -173,30 +138,24 @@ class MobileYOLOv2(Model):
             _x = Activation('leaky_relu')(_x)
             return _x
 
-        x = conv(x3, filters=256, kernel_size=3)
+        x = conv(x3, filters=64, kernel_size=3)
 
         x = UpSampling2D(size=4)(x)
-        x2 = UpSampling2D(size=2)(x2)
-        x2 = DepthwiseConv2D(kernel_size=1, depth_multiplier=4, use_bias=False)(x2)
-        x = Concatenate()([x, x2])
 
-        x = conv(x, filters=128, kernel_size=5)
+        x = conv(x, filters=64, kernel_size=5)
 
-        x1 = DepthwiseConv2D(kernel_size=1, depth_multiplier=8, use_bias=False)(x1)
-        x = Concatenate()([x, x1])
         x = UpSampling2D(size=4)(x)
 
-        x = conv(x, filters=128, kernel_size=5)
+        x = conv(x, filters=64, kernel_size=5)
         x = UpSampling2D(size=2)(x)
 
-        x = conv(x, filters=128, kernel_size=5)
-        x = Concatenate()([x, input_image])
         x = conv(x, filters=64, kernel_size=5)
+        x = conv(x, filters=32, kernel_size=5)
 
         x = Conv2D(filters=segmentation_classes, kernel_size=1)(x)
         segments = Activation('sigmoid', name='segments')(x)
         
-        self.model = Model(inputs=[input_image], outputs=[detections, distances, segments], name='mobile_yolo')
+        self.model = Model(inputs=[input_image], outputs=[detections, segments], name='mobile_yolo')
 
         self.prediction_decoder = PredictionDecoder(
             conf_threshold=conf_threshold,
@@ -251,9 +210,10 @@ class MobileYOLOv2(Model):
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
         true_labels, true_boxes, true_dist, true_mask, training_mode = y
-        detections, pred_dist, pred_mask = y_pred
+        detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
-        pred_scores = detections[..., 64:]
+        pred_scores = detections[..., 64:-1]
+        pred_dist = detections[..., -1:]
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 8400, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
@@ -330,13 +290,13 @@ class MobileYOLOv2(Model):
         def reformat(x_in):
             return {
                 'boxes': x_in[0][..., :64],
-                'classes': x_in[0][..., 64:],
-                'distances': x_in[1]
+                'classes': x_in[0][..., 64:-1],
+                'distances': x_in[0][..., -1:]
             }
 
         return {
             **self.prediction_decoder({'preds': reformat(outputs), 'images': args[-1]}),
-            'segments': outputs[2]
+            'segments': outputs[1]
         }
 
     def train_step(self, data):
