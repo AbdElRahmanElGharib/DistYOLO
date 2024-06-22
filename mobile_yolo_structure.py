@@ -18,9 +18,9 @@ class SqueezeExcite(Model):
         self.global_avg_pool = GlobalAveragePooling2D()
         self.reshape = Reshape((1, 1, input_channels))
         self.fc1 = Conv2D(input_channels // reduction_ratio, kernel_size=1, activation='relu', use_bias=False,
-                          groups=int(gcd(input_channels // reduction_ratio, input_channels) / grouping_factor))
+                          groups=1 if grouping_factor == -1 else int(gcd(input_channels // reduction_ratio, input_channels) / grouping_factor))
         self.fc2 = Conv2D(input_channels, kernel_size=1, activation='sigmoid', use_bias=False,
-                          groups=int(gcd(input_channels // reduction_ratio, input_channels) / grouping_factor))
+                          groups=1 if grouping_factor == -1 else int(gcd(input_channels // reduction_ratio, input_channels) / grouping_factor))
 
     def call(self, inputs, training=None, mask=None):
         x = self.global_avg_pool(inputs)
@@ -37,7 +37,7 @@ class BottleneckBlock(Model):
         mid_channels = in_channels * expansion_factor
 
         self.expand = Conv2D(mid_channels, kernel_size=1, use_bias=False,
-                             groups=int(gcd(mid_channels, in_channels) // grouping_factor))
+                             groups=1 if grouping_factor == -1 else int(gcd(mid_channels, in_channels) // grouping_factor))
         self.bn1 = BatchNormalization()
         self.depth_wise_conv = DepthwiseConv2D(kernel_size=3, strides=stride, padding='same', use_bias=False)
         self.bn2 = BatchNormalization()
@@ -46,7 +46,7 @@ class BottleneckBlock(Model):
         else:
             self.se = None
         self.compress = Conv2D(out_channels, kernel_size=1, use_bias=False,
-                               groups=int(gcd(mid_channels, out_channels) // grouping_factor))
+                               groups=1 if grouping_factor == -1 else int(gcd(mid_channels, out_channels) // grouping_factor))
         self.bn3 = BatchNormalization()
         self.activation = Activation('relu' if nl == 'RE' else 'swish')
 
@@ -88,7 +88,7 @@ class MobileNetV3Backbone(Model):
         self.bottleneck7 = BottleneckBlock(48, 48, 3, 1, use_se=True, nl='HS', grouping_factor=grouping_factor)
         self.bottleneck8 = BottleneckBlock(48, 96, 6, 2, use_se=True, nl='HS', grouping_factor=grouping_factor)
 
-        self.conv2 = Conv2D(576, kernel_size=1, use_bias=False, groups=int(96 // grouping_factor))
+        self.conv2 = Conv2D(576, kernel_size=1, use_bias=False, groups=1 if grouping_factor == -1 else int(96 // grouping_factor))
         self.bn2 = BatchNormalization()
         self.act2 = Activation('swish')
 
@@ -123,10 +123,10 @@ class DetectionHead(Model):
         self.sppf_1 = MaxPool2D(5, 1, padding='same')
         self.sppf_2 = MaxPool2D(9, 1, padding='same')
         self.sppf_3 = MaxPool2D(13, 1, padding='same')
-        self.sppf_4 = Conv2D(576, 1, groups=64)
+        self.sppf_4 = Conv2D(576, 1, groups=1 if grouping_factor == -1 else 64)
         self.sppf_concat = Concatenate()
 
-        self.conv_in_route1 = Conv2D(256, 1, use_bias=False, groups=int(64 // grouping_factor))
+        self.conv_in_route1 = Conv2D(256, 1, use_bias=False, groups=1 if grouping_factor == -1 else int(64 // grouping_factor))
         self.bn_in_route1 = BatchNormalization()
         self.act_in_route1 = Activation('leaky_relu')
 
@@ -134,19 +134,19 @@ class DetectionHead(Model):
         self.bottleneck2_route1 = BottleneckBlock(256, 256, 1, 1, False, 'RE', grouping_factor=grouping_factor)
 
         self.conv_out_route1 = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False,
-                                      groups=int(gcd(256, (num_classes + BOX_REGRESSORS)) // grouping_factor))
+                                      groups=1 if grouping_factor == -1 else int(gcd(256, (num_classes + BOX_REGRESSORS)) // grouping_factor))
         self.bn_out_route1 = BatchNormalization()
         self.act_out_route1 = Activation('leaky_relu')
         self.reshape_route1 = Reshape((-1, (num_classes + BOX_REGRESSORS)))
 
-        self.conv_up_1 = Conv2D(128, 1, use_bias=False, groups=int(128 // grouping_factor))
+        self.conv_up_1 = Conv2D(128, 1, use_bias=False, groups=1 if grouping_factor == -1 else int(128 // grouping_factor))
         self.bn_up_1 = BatchNormalization()
         self.act_up_1 = Activation('leaky_relu')
         self.up_1 = UpSampling2D(size=2)
 
         self.concat_route2 = Concatenate()
 
-        self.conv_in_route2 = Conv2D(128, 1, use_bias=False, groups=16)
+        self.conv_in_route2 = Conv2D(128, 1, use_bias=False, groups=1 if grouping_factor == -1 else 16)
         self.bn_in_route2 = BatchNormalization()
         self.act_in_route2 = Activation('leaky_relu')
 
@@ -154,19 +154,19 @@ class DetectionHead(Model):
         self.bottleneck2_route2 = BottleneckBlock(128, 128, 1, 1, False, 'RE', grouping_factor=grouping_factor)
 
         self.conv_out_route2 = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False,
-                                      groups=int(gcd(128, (num_classes + BOX_REGRESSORS)) // grouping_factor))
+                                      groups=1 if grouping_factor == -1 else int(gcd(128, (num_classes + BOX_REGRESSORS)) // grouping_factor))
         self.bn_out_route2 = BatchNormalization()
         self.act_out_route2 = Activation('leaky_relu')
         self.reshape_route2 = Reshape((-1, (num_classes + BOX_REGRESSORS)))
 
-        self.conv_up_2 = Conv2D(64, 1, use_bias=False, groups=int(64 // grouping_factor))
+        self.conv_up_2 = Conv2D(64, 1, use_bias=False, groups=1 if grouping_factor == -1 else int(64 // grouping_factor))
         self.bn_up_2 = BatchNormalization()
         self.act_up_2 = Activation('leaky_relu')
         self.up_2 = UpSampling2D(size=2)
 
         self.concat_route3 = Concatenate()
 
-        self.conv_in_route3 = Conv2D(64, 1, use_bias=False, groups=8)
+        self.conv_in_route3 = Conv2D(64, 1, use_bias=False, groups=1 if grouping_factor == -1 else 8)
         self.bn_in_route3 = BatchNormalization()
         self.act_in_route3 = Activation('leaky_relu')
 
@@ -174,7 +174,7 @@ class DetectionHead(Model):
         self.bottleneck2_route3 = BottleneckBlock(64, 64, 1, 1, False, 'RE', grouping_factor=grouping_factor)
 
         self.conv_out_route3 = Conv2D((num_classes + BOX_REGRESSORS), 1, use_bias=False,
-                                      groups=int(gcd(64, (num_classes + BOX_REGRESSORS)) // grouping_factor))
+                                      groups=1 if grouping_factor == -1 else int(gcd(64, (num_classes + BOX_REGRESSORS)) // grouping_factor))
         self.bn_out_route3 = BatchNormalization()
         self.act_out_route3 = Activation('leaky_relu')
         self.reshape_route3 = Reshape((-1, (num_classes + BOX_REGRESSORS)))
@@ -255,9 +255,9 @@ class DistanceHead(Model):
     def __init__(self, num_classes=80, grouping_factor=1, *args, **kwargs):
         super(DistanceHead, self).__init__(*args, **kwargs)
 
-        self.pre_conv1 = Conv2D(256, 1, groups=64)
-        self.pre_conv2 = Conv2D(256, 1, groups=16)
-        self.pre_conv3 = Conv2D(256, 1, groups=8)
+        self.pre_conv1 = Conv2D(256, 1, groups=1 if grouping_factor == -1 else 64)
+        self.pre_conv2 = Conv2D(256, 1, groups=1 if grouping_factor == -1 else 16)
+        self.pre_conv3 = Conv2D(256, 1, groups=1 if grouping_factor == -1 else 8)
 
         self.pre_reshape1 = Reshape((-1, 256))
         self.pre_reshape2 = Reshape((-1, 256))
@@ -268,15 +268,15 @@ class DistanceHead(Model):
         self.concat = Concatenate()
 
         self.conv1 = Conv1D(256, 1, use_bias=False,
-                            groups=int(gcd(256, 256 + num_classes + BOX_REGRESSORS) // grouping_factor))
+                            groups=1 if grouping_factor == -1 else int(gcd(256, 256 + num_classes + BOX_REGRESSORS) // grouping_factor))
         self.bn1 = BatchNormalization()
         self.act1 = Activation('leaky_relu')
 
-        self.conv2 = Conv1D(128, 1, use_bias=False, groups=int(128 // grouping_factor))
+        self.conv2 = Conv1D(128, 1, use_bias=False, groups=1 if grouping_factor == -1 else int(128 // grouping_factor))
         self.bn2 = BatchNormalization()
         self.act2 = Activation('leaky_relu')
 
-        self.conv3 = Conv1D(128, 1, use_bias=False, groups=int(128 // grouping_factor))
+        self.conv3 = Conv1D(128, 1, use_bias=False, groups=1 if grouping_factor == -1 else int(128 // grouping_factor))
         self.bn3 = BatchNormalization()
         self.act3 = Activation('leaky_relu')
 
@@ -341,25 +341,25 @@ class SegmentationHead(Model):
     def __init__(self, num_classes=1, grouping_factor=1, *args, **kwargs):
         super(SegmentationHead, self).__init__(*args, **kwargs)
 
-        self.conv1 = Conv(filters=256, kernel_size=3, groups=int(64 // grouping_factor), dilation_rate=2)
+        self.conv1 = Conv(filters=256, kernel_size=3, groups=1 if grouping_factor == -1 else int(64 // grouping_factor), dilation_rate=2)
 
         self.up1 = UpSampling2D(size=4)
         self.up1_in = UpSampling2D(size=2)
-        self.up1_conv_in = DepthwiseConv2D(kernel_size=1, depth_multiplier=4, groups=48, use_bias=False)
+        self.up1_conv_in = DepthwiseConv2D(kernel_size=1, depth_multiplier=4, groups=1 if grouping_factor == -1 else 48, use_bias=False)
         self.up1_concat = Concatenate()
 
-        self.conv2 = Conv(filters=256, kernel_size=5, groups=64, dilation_rate=2)
+        self.conv2 = Conv(filters=256, kernel_size=5, groups=1 if grouping_factor == -1 else 64, dilation_rate=2)
 
-        self.up2_conv_in = DepthwiseConv2D(kernel_size=1, depth_multiplier=8, groups=24, use_bias=False)
+        self.up2_conv_in = DepthwiseConv2D(kernel_size=1, depth_multiplier=8, groups=1 if grouping_factor == -1 else 24, use_bias=False)
         self.up2_concat = Concatenate()
         self.up2 = UpSampling2D(size=4)
 
-        self.conv3 = Conv(filters=256, kernel_size=5, groups=64, dilation_rate=2)
+        self.conv3 = Conv(filters=256, kernel_size=5, groups=1 if grouping_factor == -1 else 64, dilation_rate=2)
         self.up3 = UpSampling2D(size=2)
 
-        self.conv4 = Conv(filters=256, kernel_size=5, groups=int(256 // grouping_factor), dilation_rate=2)
+        self.conv4 = Conv(filters=256, kernel_size=5, groups=1 if grouping_factor == -1 else int(256 // grouping_factor), dilation_rate=2)
         self.image_concat = Concatenate()
-        self.conv5 = Conv(filters=148, kernel_size=5, groups=37, dilation_rate=2)
+        self.conv5 = Conv(filters=148, kernel_size=5, groups=1 if grouping_factor == -1 else 37, dilation_rate=2)
 
         self.conv_out = Conv2D(filters=num_classes, kernel_size=1)
         self.act_out = Activation('sigmoid')
@@ -398,11 +398,11 @@ class SegmentationHead(Model):
 # Example usage
 if __name__ == '__main__':
     input_image = Input(shape=(320, 320, 3), name='input_image')
-    features = MobileNetV3Backbone()(input_image)
-    detections = DetectionHead()(features)
-    distances = DistanceHead()((*features, detections))
-    segments = SegmentationHead()((input_image, *features))
+    features = MobileNetV3Backbone(grouping_factor=-1)(input_image)
+    detections = DetectionHead(grouping_factor=-1)(features)
+    distances = DistanceHead(grouping_factor=-1)((*features, detections))
+    segments = SegmentationHead(grouping_factor=-1)((input_image, *features))
     model = Model(inputs=[input_image], outputs=[detections, distances, segments],
                   name='MobileYOLO_with_distance_and_segmentation')
-    model.summary(expand_nested=True)
+    model.summary(expand_nested=False)
     # 145k parameters
