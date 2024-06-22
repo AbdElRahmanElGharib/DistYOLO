@@ -75,3 +75,6 @@ class PredictionDecoder(keras.Model):
         box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
 
         return self.nms({'boxes': box_preds, 'classes': scores, 'distances': distances})
+
+    def count_params(self):
+        return 0
