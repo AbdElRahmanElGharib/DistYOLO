@@ -1,7 +1,6 @@
 import tensorflow as tf
 from keras import Model
-from keras.layers import Conv2D, DepthwiseConv2D, BatchNormalization, Activation, Add, Resizing, \
-    GlobalAveragePooling2D, Reshape, Multiply, MaxPool2D, Concatenate, UpSampling2D, Input
+from keras.layers import Conv2D, DepthwiseConv2D, BatchNormalization, Activation, Add, Resizing, Reshape, MaxPool2D, Concatenate, UpSampling2D, Input
 from keras.losses import MeanSquaredError, BinaryFocalCrossentropy
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
