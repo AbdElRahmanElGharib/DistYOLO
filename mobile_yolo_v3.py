@@ -268,15 +268,6 @@ class MobileYOLOv3(Model):
 if __name__ == '__main__':
     model = MobileYOLOv3()
     model.summary()
-
-    import time
-    import numpy as np
-
-    times = []
-    for i in range(100):
-        t = time.time()
-        model.predict(tf.constant(tf.ones((1, 320, 320, 3)), dtype=tf.float32))
-        if i != 0:
-            times.append(time.time() - t)
-        print('iteration ', i + 1, ':\t', time.time() - t, 's')
-    print('average time:\t', np.average(times))
+    # 100k params
+    # 0.4 GFLOPS
+    # 250 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
