@@ -171,7 +171,7 @@ class MobileYOLOv3(Model):
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
-        anchor_points, stride_tensor = get_anchors(image_shape=x.shape[1:])
+        anchor_points, stride_tensor = get_anchors(image_shape=x.shape[1:], strides=(16, 32))
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
@@ -199,11 +199,11 @@ class MobileYOLOv3(Model):
         )
         target_boxes *= fg_mask[..., None]
         pred_boxes *= fg_mask[..., None]
-
-        boxes_training_mask = tf.broadcast_to(training_mode == 0, pred_boxes.shape)
-        classes_training_mask = tf.broadcast_to(training_mode == 0, pred_scores.shape)
-        distance_training_mask = tf.broadcast_to(training_mode == 1, pred_dist.shape)
-        segmentation_training_mask = tf.broadcast_to(training_mode == 2, pred_mask.shape)
+        
+        boxes_training_mask = tf.broadcast_to(tf.reshape(training_mode == 0, (-1, 1, 1)), pred_boxes.shape)
+        classes_training_mask = tf.broadcast_to(tf.reshape(training_mode == 0, (-1, 1, 1)), pred_scores.shape)
+        distance_training_mask = tf.broadcast_to(tf.reshape(training_mode == 1, (-1, 1, 1)), pred_dist.shape)
+        segmentation_training_mask = tf.broadcast_to(tf.reshape(training_mode == 2, (-1, 1, 1, 1)), pred_mask.shape)
 
         target_boxes = tf.where(boxes_training_mask, target_boxes, pred_boxes)
         target_scores = tf.where(classes_training_mask, target_scores, pred_scores)
@@ -228,7 +228,7 @@ class MobileYOLOv3(Model):
             "distance": 0.5 / target_scores_sum,
             "segmentation": 1.0
         }
-
+        
         return super(MobileYOLOv3, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
