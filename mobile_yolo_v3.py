@@ -191,6 +191,15 @@ class MobileYOLOv3(Model):
             }
         )
 
+        if isinstance(true_mask, tf.RaggedTensor):
+            true_mask = true_mask.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+        
+        if true_mask.shape.rank != 4:
+            true_mask = tf.broadcast_to(tf.reshape(true_mask, (-1, 1, 1, 1)), pred_mask.shape)
+        
         target_boxes /= stride_tensor
         target_scores_sum = maximum(tf.math.reduce_sum(target_scores), 1)
         box_weight = tf.expand_dims(
@@ -223,10 +232,10 @@ class MobileYOLOv3(Model):
             "segmentation": pred_mask
         }
         sample_weights = {
-            "box": 7.5 * box_weight / target_scores_sum,
-            "class": 1.0 / target_scores_sum,
-            "distance": 0.5 / target_scores_sum,
-            "segmentation": 1.0
+            "box": self.box_loss_weight * box_weight / target_scores_sum,
+            "class": self.classification_loss_weight / target_scores_sum,
+            "distance": self.distance_loss_weight / target_scores_sum,
+            "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
         
         return super(MobileYOLOv3, self).compute_loss(
