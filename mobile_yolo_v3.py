@@ -161,6 +161,7 @@ class MobileYOLOv3(Model):
         super(MobileYOLOv3, self).compile(loss=losses, **kwargs)
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
+        
         true_labels, true_boxes, true_dist, true_mask, training_mode = y
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
@@ -241,10 +242,94 @@ class MobileYOLOv3(Model):
         return super(MobileYOLOv3, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
+        
+    def compute_metrics(self, x=None, y=None, y_pred=None, sample_weight=None):
+        
+        true_labels, true_boxes, true_dist, true_mask, training_mode = y
+        detections, pred_mask = y_pred
+        pred_boxes = detections[..., :64]
+        pred_scores = detections[..., 64:-1]
+        pred_dist = detections[..., -1:]
+
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 500, 4, 16))
+        pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
+        pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
+
+        anchor_points, stride_tensor = get_anchors(image_shape=x.shape[1:], strides=(16, 32))
+        stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
+
+        mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
+
+        pred_boxes = dist2bbox(pred_boxes, tf.expand_dims(anchor_points, axis=0))
+
+        target_boxes, target_scores, target_dist, fg_mask = self.label_encoder(
+            {
+                'scores': pred_scores,
+                'decode_bboxes': tf.cast(pred_boxes * stride_tensor, true_boxes.dtype),
+                'distances': pred_dist,
+                'anchors': anchor_points * stride_tensor,
+                'gt_labels': true_labels,
+                'gt_bboxes': true_boxes,
+                'gt_distances': true_dist,
+                'gt_mask': mask_gt
+            }
+        )
+
+        if isinstance(true_mask, tf.RaggedTensor):
+            true_mask = true_mask.to_tensor(
+                default_value=-1,
+                shape=None
+            )
+        
+        if true_mask.shape.rank != 4:
+            true_mask = tf.broadcast_to(tf.reshape(true_mask, (-1, 1, 1, 1)), pred_mask.shape)
+        
+        target_boxes /= stride_tensor
+        target_scores_sum = maximum(tf.math.reduce_sum(target_scores), 1)
+        box_weight = tf.expand_dims(
+            tf.math.reduce_sum(target_scores, axis=-1) * fg_mask,
+            axis=-1,
+        )
+        target_boxes *= fg_mask[..., None]
+        pred_boxes *= fg_mask[..., None]
+        
+        boxes_training_mask = tf.broadcast_to(tf.reshape(training_mode == 0, (-1, 1, 1)), pred_boxes.shape)
+        classes_training_mask = tf.broadcast_to(tf.reshape(training_mode == 0, (-1, 1, 1)), pred_scores.shape)
+        distance_training_mask = tf.broadcast_to(tf.reshape(training_mode == 1, (-1, 1, 1)), pred_dist.shape)
+        segmentation_training_mask = tf.broadcast_to(tf.reshape(training_mode == 2, (-1, 1, 1, 1)), pred_mask.shape)
+
+        target_boxes = tf.where(boxes_training_mask, target_boxes, pred_boxes)
+        target_scores = tf.where(classes_training_mask, target_scores, pred_scores)
+        target_dist = tf.where(distance_training_mask, target_dist, pred_dist)
+        true_mask = tf.where(segmentation_training_mask, true_mask, pred_mask)
+
+        y_true = {
+            "box": target_boxes,
+            "class": target_scores,
+            "distance": target_dist,
+            "segmentation": true_mask
+        }
+        y_pred = {
+            "box": pred_boxes,
+            "class": pred_scores,
+            "distance": pred_dist,
+            "segmentation": pred_mask
+        }
+        sample_weights = {
+            "box": self.box_loss_weight * box_weight / target_scores_sum,
+            "class": self.classification_loss_weight / target_scores_sum,
+            "distance": self.distance_loss_weight / target_scores_sum,
+            "segmentation": self.segmentation_loss_weight / target_scores_sum
+        }
+        
+        return super(MobileYOLOv3, self).compute_metrics(
+            x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
+        )
 
     def call(self, inputs, training=None, mask=None):
         return self.model.call(inputs, training, mask)
 
+    @tf.function
     def predict_step(self, *args):
         outputs = super(MobileYOLOv3, self).predict_step(*args)
 
@@ -260,6 +345,7 @@ class MobileYOLOv3(Model):
             'segments': outputs[1]
         }
 
+    @tf.function
     def train_step(self, data):
         if not isinstance(data, tuple):
             data = tuple(data)
@@ -270,7 +356,15 @@ class MobileYOLOv3(Model):
         if len(data) == 3:
             sample_weight = data[2]
 
-        return super(MobileYOLOv3, self).train_step((x, y, sample_weight))
+        with tf.GradientTape() as tape:
+            y_pred = self.call(x, training=True)
+            loss = self.compute_loss(x, y, y_pred, sample_weight)
+        
+        trainable_variables = self.trainable_variables
+        gradients = tape.gradient(loss, trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, trainable_variables))
+        
+        return self.compute_metrics(x, y, y_pred, sample_weight)
 
 
 if __name__ == '__main__':
