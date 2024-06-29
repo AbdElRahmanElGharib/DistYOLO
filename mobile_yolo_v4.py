@@ -11,7 +11,7 @@ from loss import maximum, CIoULoss
 BOX_REGRESSORS = 64
 
 
-class MobileYOLOv3(Model):
+class MobileYOLOv4(Model):
     def __init__(
             self,
             num_classes=80,
@@ -21,9 +21,9 @@ class MobileYOLOv3(Model):
             *args,
             **kwargs
     ):
-        super(MobileYOLOv3, self).__init__(*args, **kwargs)
+        super(MobileYOLOv4, self).__init__(*args, **kwargs)
 
-        # self.backbone = MobileNetV3Small(
+        # backbone = MobileNetV3Small(
         #     input_shape=(224, 224, 3),
         #     alpha=0.75,
         #     minimalistic=False,
@@ -31,11 +31,11 @@ class MobileYOLOv3(Model):
         #     weights="imagenet"
         # )
 
-        # self.backbone = Model(inputs=[self.backbone.layers[0].input],
-        #                       outputs=[self.backbone.layers[-1].output, self.backbone.layers[153].output],
-        #                       name='mobile_net_v3')
+        # backbone = Model(inputs=[backbone.layers[0].input],
+        #                  outputs=[backbone.layers[-1].output, backbone.layers[153].output],
+        #                  name='mobile_net_v3')
 
-        # self.backbone = MobileNetV3Small(
+        # backbone = MobileNetV3Small(
         #     input_shape=(224, 224, 3),
         #     alpha=1.0,
         #     minimalistic=True,
@@ -43,39 +43,39 @@ class MobileYOLOv3(Model):
         #     weights="imagenet"
         # )
 
-        # self.backbone = Model(inputs=[self.backbone.layers[0].input],
-        #                       outputs=[self.backbone.layers[-1].output, self.backbone.layers[72].output],
-        #                       name='mobile_net_v3_minimalistic')
+        # backbone = Model(inputs=[backbone.layers[0].input],
+        #                  outputs=[backbone.layers[-1].output, backbone.layers[72].output],
+        #                  name='mobile_net_v3_minimalistic')
 
-        # self.backbone = MobileNetV2(
+        # backbone = MobileNetV2(
         #     input_shape=(224, 224, 3),
         #     alpha=0.35,
         #     include_top=False,
         #     weights="imagenet"
         # )
 
-        # self.backbone = Model(inputs=[self.backbone.layers[0].input],
-        #                       outputs=[self.backbone.layers[-1].output, self.backbone.layers[115].output],
-        #                       name='mobile_net_v2')
+        # backbone = Model(inputs=[backbone.layers[0].input],
+        #                  outputs=[backbone.layers[-1].output, backbone.layers[115].output],
+        #                  name='mobile_net_v2')
 
-        self.backbone = MobileNet(
+        backbone = MobileNet(
             input_shape=(224, 224, 3),
             alpha=0.25,
             include_top=False,
             weights="imagenet"
         )
 
-        self.backbone = Model(inputs=[self.backbone.layers[0].input],
-                              outputs=[self.backbone.layers[-1].output, self.backbone.layers[72].output],
-                              name='mobile_net')
+        backbone = Model(inputs=[backbone.layers[0].input],
+                         outputs=[backbone.layers[-1].output, backbone.layers[72].output],
+                         name='mobile_net')
 
-        self.backbone.trainable = False
+        backbone.trainable = False
 
         input_image = Input(shape=(None, None, 3), name='input')
 
         x = Resizing(224, 224)(input_image)
 
-        x3, x2 = self.backbone(x)
+        x3, x2 = backbone(x)
 
         sppf1 = MaxPool2D(5, 1, padding='same')(x3)
         sppf2 = MaxPool2D(9, 1, padding='same')(x3)
@@ -191,7 +191,7 @@ class MobileYOLOv3(Model):
             "segmentation": self.segmentation_loss
         }
 
-        super(MobileYOLOv3, self).compile(loss=losses, **kwargs)
+        super(MobileYOLOv4, self).compile(loss=losses, **kwargs)
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
 
@@ -276,7 +276,7 @@ class MobileYOLOv3(Model):
             "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
 
-        return super(MobileYOLOv3, self).compute_loss(
+        return super(MobileYOLOv4, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
 
@@ -363,7 +363,7 @@ class MobileYOLOv3(Model):
             "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
 
-        return super(MobileYOLOv3, self).compute_metrics(
+        return super(MobileYOLOv4, self).compute_metrics(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
 
@@ -372,7 +372,7 @@ class MobileYOLOv3(Model):
 
     @tf.function
     def predict_step(self, *args):
-        outputs = super(MobileYOLOv3, self).predict_step(*args)
+        outputs = super(MobileYOLOv4, self).predict_step(*args)
 
         def reformat(x_in):
             return {
@@ -409,8 +409,8 @@ class MobileYOLOv3(Model):
 
 
 if __name__ == '__main__':
-    model = MobileYOLOv3()
+    model = MobileYOLOv4()
     model.summary()
     # 350k params
     # 0.4 GFLOPS
-    # 210 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
+    # 250 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
