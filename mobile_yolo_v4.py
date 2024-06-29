@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import Model
 from keras.applications import MobileNet
 from keras.layers import Conv2D, DepthwiseConv2D, BatchNormalization, Activation, Resizing, Reshape, \
-    MaxPool2D, Concatenate, UpSampling2D, Input, ZeroPadding2D
+    MaxPool2D, Concatenate, UpSampling2D, Input
 from keras.losses import MeanSquaredError, BinaryFocalCrossentropy
 from prediction_decoder import PredictionDecoder, get_anchors, dist2bbox
 from label_encoder import LabelEncoder
@@ -120,14 +120,12 @@ class MobileYOLOv4(Model):
         x = Activation('leaky_relu')(x)
         x = UpSampling2D(size=3)(x)
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
-        x = Conv2D(filters=64, kernel_size=1, use_bias=False)(x)
+        x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
         x = UpSampling2D(size=3)(x)
-        x = ZeroPadding2D()(x)
-        x = Conv2D(filters=64, kernel_size=2, use_bias=False)(x)
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
-        x = Conv2D(filters=64, kernel_size=1, use_bias=False)(x)
+        x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
