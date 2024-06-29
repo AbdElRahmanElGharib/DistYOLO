@@ -305,9 +305,13 @@ class MobileYOLOv3(Model):
         segmentation_training_mask = tf.broadcast_to(tf.reshape(training_mode == 2, (-1, 1, 1, 1)), pred_mask.shape)
 
         target_boxes = tf.where(boxes_training_mask, target_boxes, pred_boxes)
-        target_scores = tf.where(classes_training_mask, target_scores, pred_scores)
-        target_dist = tf.where(distance_training_mask, target_dist, pred_dist)
-        true_mask = tf.where(segmentation_training_mask, true_mask, pred_mask)
+        target_scores = tf.where(classes_training_mask, target_scores, tf.ones_like(pred_scores))
+        target_dist = tf.where(distance_training_mask, target_dist, tf.ones_like(pred_dist))
+        true_mask = tf.where(segmentation_training_mask, true_mask, tf.ones_like(pred_mask))
+
+        pred_scores = tf.where(classes_training_mask, pred_scores, tf.ones_like(pred_scores))
+        pred_dist = tf.where(distance_training_mask, pred_dist, tf.ones_like(pred_dist))
+        pred_mask = tf.where(segmentation_training_mask, pred_mask, tf.ones_like(pred_mask))
 
         y_true = {
             "box": target_boxes,
