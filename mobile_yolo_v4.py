@@ -409,6 +409,6 @@ class MobileYOLOv4(Model):
 if __name__ == '__main__':
     model = MobileYOLOv4()
     model.summary()
-    # 350k params
-    # 0.4 GFLOPS
-    # 250 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
+    # 330k params
+    # 0.8 GFLOPS
+    # 300 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
