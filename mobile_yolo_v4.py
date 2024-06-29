@@ -199,7 +199,7 @@ class MobileYOLOv4(Model):
         pred_scores = detections[..., 64:-1]
         pred_dist = detections[..., -1:] * 150.0
 
-        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 500, 4, 16))
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
@@ -286,7 +286,7 @@ class MobileYOLOv4(Model):
         pred_scores = detections[..., 64:-1]
         pred_dist = detections[..., -1:] * 150.0
 
-        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 500, 4, 16))
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
