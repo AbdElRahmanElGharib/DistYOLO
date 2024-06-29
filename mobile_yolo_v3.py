@@ -91,7 +91,7 @@ class MobileYOLOv3(Model):
 
         x_detections = Concatenate(axis=-2)([out_1, out_2])
 
-        detections = Activation('linear', name='detections')(x_detections)
+        detections = Activation('sigmoid', name='detections')(x_detections)
 
         x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x3)
         x = BatchNormalization()(x)
@@ -103,7 +103,9 @@ class MobileYOLOv3(Model):
         x = Conv2D(filters=16, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
+
         x = Conv2D(filters=segmentation_classes, kernel_size=1)(x)
+
         segments = Activation('sigmoid', name='segments')(x)
 
         self.model = Model(inputs=[input_image], outputs=[detections, segments], name='mobile_yolo')
@@ -238,7 +240,7 @@ class MobileYOLOv3(Model):
             "distance": self.distance_loss_weight / target_scores_sum,
             "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
-        
+
         return super(MobileYOLOv3, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
