@@ -131,7 +131,7 @@ class MobileYOLOv4(Model):
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False, name='segmentation_conv_4_depth_wise')(x)
         x = Conv2D(filters=16, kernel_size=1, use_bias=False, name='segmentation_conv_4_point_wise')(x)
         x = BatchNormalization(name='segmentation_bn_4')(x)
-        x = Activation('leaky_relu', name='segmentation_act_3')(x)
+        x = Activation('leaky_relu', name='segmentation_act_4')(x)
 
         x = Conv2D(filters=segmentation_classes, kernel_size=1, name='segmentation_conv_5')(x)
 
