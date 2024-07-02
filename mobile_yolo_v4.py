@@ -155,7 +155,12 @@ class MobileYOLOv4(Model):
             reduction="sum"
         )
         self.distance_loss = MeanSquaredError(reduction="sum")
-        self.segmentation_loss = BinaryFocalCrossentropy()
+        self.segmentation_loss = BinaryFocalCrossentropy(
+            apply_class_balancing=True,
+            alpha=0.25,
+            gamma=2.0,
+            reduction="sum"
+        )
 
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 1.0
