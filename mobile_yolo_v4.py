@@ -113,7 +113,7 @@ class MobileYOLOv4(Model):
 
         x_detections = Concatenate(axis=-2, name='detections_concat')([out_1, out_2])
 
-        detections = Activation('sigmoid', name='detections')(x_detections)
+        detections = Activation('linear', name='detections')(x_detections)
 
         x = Conv2D(filters=32, kernel_size=1, use_bias=False, name='segmentation_conv_1')(x3)
         x = BatchNormalization(name='segmentation_bn_1')(x)
@@ -149,6 +149,7 @@ class MobileYOLOv4(Model):
 
         self.box_loss = CIoULoss(reduction="sum")
         self.classification_loss = BinaryFocalCrossentropy(
+            from_logits=True,
             apply_class_balancing=True,
             alpha=0.25,
             gamma=2.0,
@@ -197,7 +198,7 @@ class MobileYOLOv4(Model):
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
         pred_scores = detections[..., 64:-1]
-        pred_dist = detections[..., -1:] * 150.0
+        pred_dist = detections[..., -1:]
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
@@ -284,7 +285,7 @@ class MobileYOLOv4(Model):
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
         pred_scores = detections[..., 64:-1]
-        pred_dist = detections[..., -1:] * 150.0
+        pred_dist = detections[..., -1:]
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
@@ -375,8 +376,8 @@ class MobileYOLOv4(Model):
         def reformat(x_in):
             return {
                 'boxes': x_in[0][..., :64],
-                'classes': x_in[0][..., 64:-1],
-                'distances': x_in[0][..., -1:] * 150.0
+                'classes': tf.nn.sigmoid(x_in[0][..., 64:-1]),
+                'distances': x_in[0][..., -1:]
             }
 
         return {
