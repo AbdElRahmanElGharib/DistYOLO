@@ -67,13 +67,13 @@ class MobileYOLOv4(Model):
 
         backbone = Model(inputs=[backbone.layers[0].input],
                          outputs=[backbone.layers[-1].output, backbone.layers[72].output],
-                         name='mobile_net')
+                         name='mobile_net_backbone')
 
         backbone.trainable = False
 
         input_image = Input(shape=(None, None, 3), name='input')
 
-        x = Resizing(224, 224)(input_image)
+        x = Resizing(224, 224, name='resizing')(input_image)
 
         x3, x2 = backbone(x)
 
@@ -155,12 +155,7 @@ class MobileYOLOv4(Model):
             reduction="sum"
         )
         self.distance_loss = MeanSquaredError(reduction="sum")
-        self.segmentation_loss = BinaryFocalCrossentropy(
-            apply_class_balancing=True,
-            alpha=0.25,
-            gamma=2.0,
-            reduction="sum"
-        )
+        self.segmentation_loss = BinaryFocalCrossentropy()
 
         self.box_loss_weight = 7.5
         self.classification_loss_weight = 1.0
