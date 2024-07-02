@@ -113,7 +113,7 @@ class MobileYOLOv4(Model):
 
         x_detections = Concatenate(axis=-2, name='detections_concat')([out_1, out_2])
 
-        detections = Activation('linear', name='detections')(x_detections)
+        detections = Activation('leaky-relu', name='detections')(x_detections)
 
         x = Conv2D(filters=32, kernel_size=1, use_bias=False, name='segmentation_conv_1')(x3)
         x = BatchNormalization(name='segmentation_bn_1')(x)
@@ -149,7 +149,6 @@ class MobileYOLOv4(Model):
 
         self.box_loss = CIoULoss(reduction="sum")
         self.classification_loss = BinaryFocalCrossentropy(
-            from_logits=True,
             apply_class_balancing=True,
             alpha=0.25,
             gamma=2.0,
@@ -197,7 +196,7 @@ class MobileYOLOv4(Model):
         true_labels, true_boxes, true_dist, true_mask, training_mode = y
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
-        pred_scores = detections[..., 64:-1]
+        pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
         pred_dist = detections[..., -1:]
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
@@ -284,7 +283,7 @@ class MobileYOLOv4(Model):
         true_labels, true_boxes, true_dist, true_mask, training_mode = y
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
-        pred_scores = detections[..., 64:-1]
+        pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
         pred_dist = detections[..., -1:]
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
