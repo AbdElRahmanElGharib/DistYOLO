@@ -113,7 +113,7 @@ class MobileYOLOv4(Model):
 
         x_detections = Concatenate(axis=-2, name='detections_concat')([out_1, out_2])
 
-        detections = Activation('leaky-relu', name='detections')(x_detections)
+        detections = Activation('leaky_relu', name='detections')(x_detections)
 
         x = Conv2D(filters=32, kernel_size=1, use_bias=False, name='segmentation_conv_1')(x3)
         x = BatchNormalization(name='segmentation_bn_1')(x)
