@@ -51,7 +51,7 @@ def dist2bbox(distance, anchor_points):
 
 
 class PredictionDecoder(keras.Model):
-    def __init__(self, conf_threshold=0.2, iou_threshold=0.7, anchor_strides=(8, 16, 32), *args, **kwargs):
+    def __init__(self, conf_threshold=0.2, iou_threshold=0.7, anchor_strides=(8, 16, 32), image_shape=None, *args, **kwargs):
         super(PredictionDecoder, self).__init__(*args, **kwargs)
         self.boxes_reshape = keras.layers.Reshape(target_shape=(-1, 4, 16))
         self.anchor_strides = anchor_strides
@@ -59,9 +59,13 @@ class PredictionDecoder(keras.Model):
                 confidence_threshold=conf_threshold,
                 iou_threshold=iou_threshold,
             )
+        self.image_shape = image_shape
 
     def call(self, inputs, training=None, mask=None):
         preds, images = inputs['preds'], inputs['images']
+
+        if self.image_shape is None:
+            self.image_shape = images.shape[1:]
 
         boxes = preds['boxes']
         scores = preds['classes']
@@ -71,7 +75,7 @@ class PredictionDecoder(keras.Model):
         boxes = tf.nn.softmax(logits=boxes, axis=-1) * tf.range(16, dtype='float32')
         boxes = tf.math.reduce_sum(boxes, axis=-1)
 
-        anchor_points, stride_tensor = get_anchors(image_shape=images.shape[1:], strides=self.anchor_strides)
+        anchor_points, stride_tensor = get_anchors(image_shape=self.image_shape, strides=self.anchor_strides)
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
         box_preds = dist2bbox(boxes, anchor_points) * stride_tensor
 
