@@ -117,23 +117,12 @@ class MobileYOLOv4(Model):
 
         detections = Activation('linear', name='detections')(x_detections)
 
-        x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x1)
-        x = BatchNormalization()(x)
-        x = Activation('leaky_relu')(x)
-
-        x = UpSampling2D(size=2)(x)
-
-        x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
+        x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x1)
         x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
 
-        x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
-        x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('leaky_relu')(x)
-
-        x = UpSampling2D(size=2)(x)
+        x = UpSampling2D(size=3)(x)
 
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
         x = Conv2D(filters=16, kernel_size=1, use_bias=False)(x)
