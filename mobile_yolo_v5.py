@@ -67,19 +67,19 @@ class MobileYOLOv4(Model):
 
         out_1 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
 
-        x = Conv2D(48, 1, use_bias=False)(x_mid)
+        x = Conv2D(64, 1, use_bias=False)(x_mid)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
         x = UpSampling2D(size=2)(x)
 
         x = Concatenate()([x, x2])
 
-        x = Conv2D(96, 1, use_bias=False)(x)
+        x = Conv2D(64, 1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
 
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
-        x = Conv2D(48, 1, use_bias=False)(x)
+        x = Conv2D(64, 1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x_mid = Activation('leaky_relu')(x)
 
@@ -90,27 +90,56 @@ class MobileYOLOv4(Model):
 
         out_2 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
 
-        x_detections = Concatenate(axis=-2)([out_1, out_2])
+        x = Conv2D(64, 1, use_bias=False)(x_mid)
+        x = BatchNormalization()(x)
+        x = Activation('leaky_relu')(x)
+        x = UpSampling2D(size=2)(x)
+
+        x = Concatenate()([x, x1])
+
+        x = Conv2D(64, 1, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('leaky_relu')(x)
+
+        x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
+        x = Conv2D(64, 1, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('leaky_relu')(x)
+
+        x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
+        x = Conv2D((num_classes + BOX_REGRESSORS + 1), 1, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('leaky_relu')(x)
+
+        out_3 = Reshape((-1, (num_classes + BOX_REGRESSORS + 1)))(x)
+
+        x_detections = Concatenate(axis=-2)([out_1, out_2, out_3])
 
         detections = Activation('linear', name='detections')(x_detections)
 
         x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x1)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
+
         x = UpSampling2D(size=2)(x)
+
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
         x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
+
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
         x = Conv2D(filters=32, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
+
         x = UpSampling2D(size=2)(x)
+
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
         x = Conv2D(filters=16, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = Activation('leaky_relu')(x)
+
         x = DepthwiseConv2D(kernel_size=3, padding='same', dilation_rate=2, use_bias=False)(x)
         x = Conv2D(filters=16, kernel_size=1, use_bias=False)(x)
         x = BatchNormalization()(x)
@@ -125,7 +154,7 @@ class MobileYOLOv4(Model):
         self.prediction_decoder = PredictionDecoder(
             conf_threshold=conf_threshold,
             iou_threshold=iou_threshold,
-            anchor_strides=(16, 32)
+            image_shape=(224, 224, 3)
         )
 
         self.label_encoder = LabelEncoder(num_classes=num_classes)
@@ -180,13 +209,13 @@ class MobileYOLOv4(Model):
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
         pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
-        pred_dist = detections[..., -1:]
+        pred_dist = tf.nn.leaky_relu(detections[..., -1:])
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
-        anchor_points, stride_tensor = get_anchors(image_shape=x.shape[1:], strides=(16, 32))
+        anchor_points, stride_tensor = get_anchors(image_shape=(224, 224, 3))
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
@@ -267,13 +296,13 @@ class MobileYOLOv4(Model):
         detections, pred_mask = y_pred
         pred_boxes = detections[..., :64]
         pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
-        pred_dist = detections[..., -1:]
+        pred_dist = tf.nn.leaky_relu(detections[..., -1:])
 
         pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
         pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
         pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
-        anchor_points, stride_tensor = get_anchors(image_shape=x.shape[1:], strides=(16, 32))
+        anchor_points, stride_tensor = get_anchors(image_shape=(224, 224, 3))
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
@@ -359,7 +388,7 @@ class MobileYOLOv4(Model):
             return {
                 'boxes': x_in[0][..., :64],
                 'classes': tf.nn.sigmoid(x_in[0][..., 64:-1]),
-                'distances': x_in[0][..., -1:]
+                'distances': tf.nn.leaky_relu(x_in[0][..., -1:])
             }
 
         return {
@@ -392,6 +421,6 @@ class MobileYOLOv4(Model):
 if __name__ == '__main__':
     model = MobileYOLOv4()
     model.summary()
-    # 330k params
+    # 430k params
     # 0.8 GFLOPS
     # 300 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
