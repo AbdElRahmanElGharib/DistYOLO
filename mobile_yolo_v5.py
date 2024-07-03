@@ -11,7 +11,7 @@ from loss import maximum, CIoULoss
 BOX_REGRESSORS = 64
 
 
-class MobileYOLOv4(Model):
+class MobileYOLOv5(Model):
     def __init__(
             self,
             num_classes=80,
@@ -21,7 +21,7 @@ class MobileYOLOv4(Model):
             *args,
             **kwargs
     ):
-        super(MobileYOLOv4, self).__init__(*args, **kwargs)
+        super(MobileYOLOv5, self).__init__(*args, **kwargs)
 
         backbone = MobileNet(
             input_shape=(224, 224, 3),
@@ -190,7 +190,7 @@ class MobileYOLOv4(Model):
             "segmentation": self.segmentation_loss
         }
 
-        super(MobileYOLOv4, self).compile(loss=losses, **kwargs)
+        super(MobileYOLOv5, self).compile(loss=losses, **kwargs)
 
     def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
 
@@ -275,7 +275,7 @@ class MobileYOLOv4(Model):
             "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
 
-        return super(MobileYOLOv4, self).compute_loss(
+        return super(MobileYOLOv5, self).compute_loss(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
 
@@ -362,7 +362,7 @@ class MobileYOLOv4(Model):
             "segmentation": self.segmentation_loss_weight / target_scores_sum
         }
 
-        return super(MobileYOLOv4, self).compute_metrics(
+        return super(MobileYOLOv5, self).compute_metrics(
             x=x, y=y_true, y_pred=y_pred, sample_weight=sample_weights
         )
 
@@ -371,7 +371,7 @@ class MobileYOLOv4(Model):
 
     @tf.function
     def predict_step(self, *args):
-        outputs = super(MobileYOLOv4, self).predict_step(*args)
+        outputs = super(MobileYOLOv5, self).predict_step(*args)
 
         def reformat(x_in):
             return {
@@ -408,8 +408,8 @@ class MobileYOLOv4(Model):
 
 
 if __name__ == '__main__':
-    model = MobileYOLOv4()
+    model = MobileYOLOv5()
     model.summary()
-    # 430k params
+    # 425k params
     # 0.8 GFLOPS
     # 300 fps on "Processor	Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz, 2592 Mhz, 6 Core(s), 12 Logical Processor(s)" using ONNX Framework
