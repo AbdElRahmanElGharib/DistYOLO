@@ -200,12 +200,12 @@ class MobileYOLOv5(Model):
         pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
         pred_dist = tf.nn.leaky_relu(detections[..., -1:])
 
-        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
-        pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
-        pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
-
         anchor_points, stride_tensor = get_anchors(image_shape=(224, 224, 3))
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
+
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, anchor_points.shape[0], 4, 16))
+        pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
+        pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
 
@@ -287,12 +287,12 @@ class MobileYOLOv5(Model):
         pred_scores = tf.nn.sigmoid(detections[..., 64:-1])
         pred_dist = tf.nn.leaky_relu(detections[..., -1:])
 
-        pred_boxes = tf.reshape(pred_boxes, shape=(-1, 245, 4, 16))
-        pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
-        pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
-
         anchor_points, stride_tensor = get_anchors(image_shape=(224, 224, 3))
         stride_tensor = tf.expand_dims(stride_tensor, axis=-1)
+
+        pred_boxes = tf.reshape(pred_boxes, shape=(-1, anchor_points.shape[0], 4, 16))
+        pred_boxes = tf.nn.softmax(logits=pred_boxes, axis=-1) * tf.range(16, dtype='float32')
+        pred_boxes = tf.math.reduce_sum(pred_boxes, axis=-1)
 
         mask_gt = tf.math.reduce_all(true_boxes > -1.0, axis=-1, keepdims=True)
 
